@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { el, type NodeRepr_t } from "@elemaudio/core";
 import {
   rissetTapeDelayGraph,
+  MAX_VOICES,
   type RissetTapeDelayParams,
 } from "@/synth/risset-tape-delay";
 import * as engine from "@/audio/delay-engine";
@@ -10,32 +11,86 @@ import { Slider } from "@/components/Slider";
 
 type Source = "mic" | "file";
 
-const DEFAULT_PARAMS: RissetTapeDelayParams = {
-  speed: 0.1,
-  range: 1.0,
-  directionUp: true,
-  feedback: 0.4,
-  dryWet: 0.5,
-  inputGain: 1.0,
-};
+const SPEED_LIMIT = 5;
+const RANGE_MIN = 0.1;
+const RANGE_MAX = 10;
+
+interface Preset {
+  name: string;
+  speed: number;
+  range: number;
+  numVoices: number;
+  tilt: number;
+  feedback: number;
+  dryWet: number;
+  inputGain: number;
+}
+
+const BUILT_IN_PRESETS: Preset[] = [
+  { name: "Classic Shepard",  speed:  2.0,  range: 2.0, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7, inputGain: 1.0 },
+  { name: "Gentle Rise",      speed:  0.5,  range: 0.5, numVoices: 8,  tilt: 0,    feedback: 0.3, dryWet: 0.6, inputGain: 1.0 },
+  { name: "Warm Rise",        speed:  2.0,  range: 2.0, numVoices: 8,  tilt: -0.6, feedback: 0.4, dryWet: 0.7, inputGain: 1.0 },
+  { name: "Slow Fall",        speed: -0.3,  range: 0.3, numVoices: 8,  tilt: 0,    feedback: 0.5, dryWet: 0.7, inputGain: 1.0 },
+  { name: "Deep Spiral",      speed:  1.0,  range: 3.0, numVoices: 12, tilt: -0.3, feedback: 0.6, dryWet: 0.8, inputGain: 1.0 },
+  { name: "Fast Shimmer",     speed:  4.0,  range: 4.0, numVoices: 6,  tilt: 0,    feedback: 0.2, dryWet: 0.5, inputGain: 1.0 },
+  { name: "Frozen",           speed:  0.1,  range: 0.1, numVoices: 12, tilt: 0,    feedback: 0.9, dryWet: 0.9, inputGain: 0.8 },
+  { name: "Descent",          speed: -2.0,  range: 2.0, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7, inputGain: 1.0 },
+  { name: "Wide & Slow",      speed:  0.2,  range: 6.0, numVoices: 10, tilt: 0,    feedback: 0.7, dryWet: 0.85, inputGain: 1.0 },
+];
+
+function deriveParams(
+  speed: number,
+  range: number,
+  rest: Omit<RissetTapeDelayParams, "speed" | "range" | "directionUp">
+): RissetTapeDelayParams {
+  return {
+    ...rest,
+    speed: Math.abs(speed),
+    range,
+    directionUp: speed >= 0,
+  };
+}
 
 export function RissetTapeDelay() {
   const [playing, setPlaying] = useState(false);
   const [outputVol, setOutputVol] = useState(0.5);
   const [source, setSource] = useState<Source>("file");
   const [fileUrl, setFileUrl] = useState("");
-  const [params, setParams] = useState<RissetTapeDelayParams>(DEFAULT_PARAMS);
+
+  const [speed, setSpeed] = useState(2.0);
+  const [range, setRange] = useState(2.0);
+  const [numVoices, setNumVoices] = useState(8);
+  const [tilt, setTilt] = useState(0);
+  const [feedback, setFeedback] = useState(0.4);
+  const [dryWet, setDryWet] = useState(0.7);
+  const [inputGain, setInputGain] = useState(1.0);
+
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
+  const [lockRatio, setLockRatio] = useState(false);
+  const [customPresets, setCustomPresets] = useState<Preset[]>([]);
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const saveInputRef = useRef<HTMLInputElement>(null);
+  const tapTimesRef = useRef<number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const playingRef = useRef(playing);
   const sourceConnectedRef = useRef(false);
   playingRef.current = playing;
 
-  const pitchRatio = params.directionUp
-    ? 1 + params.range * params.speed
-    : 1 - params.range * params.speed;
+  const absSpeed = Math.abs(speed);
+  const pitchProduct = absSpeed * range;
+  const dirUp = speed >= 0;
+  const pitchRatio = dirUp ? 1 + pitchProduct : Math.max(1 - pitchProduct, 0.01);
   const semitones = Math.round(12 * Math.log2(Math.max(pitchRatio, 0.01)));
+
+  const params = deriveParams(speed, range, {
+    numVoices,
+    tilt,
+    feedback,
+    dryWet,
+    inputGain,
+  });
 
   useEffect(() => {
     engine.onScope((data) => {
@@ -125,12 +180,74 @@ export function RissetTapeDelay() {
     }
   }, [fileUrl]);
 
-  const set = <K extends keyof RissetTapeDelayParams>(
-    key: K,
-    value: RissetTapeDelayParams[K]
-  ) => {
-    setParams((prev) => ({ ...prev, [key]: value }));
+  // Lock: |speed| Hz = range s (mirror the numbers)
+  const handleSpeed = (newSpeed: number) => {
+    if (lockRatio) {
+      const clamped = Math.min(RANGE_MAX, Math.max(RANGE_MIN, Math.abs(newSpeed)));
+      setRange(Math.round(clamped * 10) / 10);
+    }
+    setSpeed(newSpeed);
   };
+
+  const handleRange = (newRange: number) => {
+    if (lockRatio) {
+      const sign = speed >= 0 ? 1 : -1;
+      const clamped = Math.min(SPEED_LIMIT, newRange);
+      setSpeed(Math.round(sign * clamped * 100) / 100);
+    }
+    setRange(newRange);
+  };
+
+  const TAP_TIMEOUT = 3000;
+  const handleTap = () => {
+    const now = performance.now();
+    const taps = tapTimesRef.current;
+    if (taps.length > 0 && now - taps[taps.length - 1] > TAP_TIMEOUT) {
+      taps.length = 0;
+    }
+    taps.push(now);
+    if (taps.length > 5) taps.shift();
+    if (taps.length < 2) return;
+    const intervals: number[] = [];
+    for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
+    const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const sec = Math.min(RANGE_MAX, Math.max(RANGE_MIN, avgMs / 1000));
+    handleRange(Math.round(sec * 1000) / 1000);
+  };
+
+  const applyPreset = (p: Preset) => {
+    setSpeed(p.speed);
+    setRange(p.range);
+    setNumVoices(p.numVoices);
+    setTilt(p.tilt);
+    setFeedback(p.feedback);
+    setDryWet(p.dryWet);
+    setInputGain(p.inputGain);
+  };
+
+  const startSaving = () => {
+    setSavingPreset(true);
+    setPresetName("");
+    setTimeout(() => saveInputRef.current?.focus(), 0);
+  };
+
+  const savePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    setCustomPresets((prev) => [
+      ...prev,
+      { name, speed, range, numVoices, tilt, feedback, dryWet, inputGain },
+    ]);
+    setSavingPreset(false);
+    setPresetName("");
+  };
+
+  const deleteCustomPreset = (index: number) => {
+    setCustomPresets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const dirLabel = speed > 0 ? "↑" : speed < 0 ? "↓" : "—";
+  const allPresets = [...BUILT_IN_PRESETS, ...customPresets];
 
   return (
     <div>
@@ -138,10 +255,9 @@ export function RissetTapeDelay() {
         Risset Tape Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
-        A phasor sweeps the play head across the tape. As it approaches the
-        record head the audio pitch-shifts{" "}
-        {params.directionUp ? "upward" : "downward"}, then the head resets
-        and sweeps again.
+        {numVoices} play heads sweep an exponential curve through the tape
+        buffer, each Hann-windowed and equidistant in phase — creating an
+        endlessly {dirUp ? "rising" : "falling"} Shepard pitch spiral.
       </p>
 
       <div className="source-bar">
@@ -185,14 +301,84 @@ export function RissetTapeDelay() {
         </div>
       </div>
 
+      <div className="presets">
+        <span className="presets-label">Presets</span>
+        {allPresets.map((p, i) => (
+          <span key={i} style={{ position: "relative", display: "inline-block" }}>
+            <button
+              className="preset-btn"
+              onClick={() => applyPreset(p)}
+              title={`${p.speed} Hz / ${p.range}s / ${p.numVoices}v`}
+            >
+              {p.name}
+            </button>
+            {i >= BUILT_IN_PRESETS.length && (
+              <button
+                style={{
+                  position: "absolute",
+                  top: "-4px",
+                  right: "-4px",
+                  width: "14px",
+                  height: "14px",
+                  borderRadius: "50%",
+                  border: "1px solid #444",
+                  background: "#222",
+                  color: "#888",
+                  fontSize: "9px",
+                  lineHeight: "1",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteCustomPreset(i - BUILT_IN_PRESETS.length);
+                }}
+                title="Delete preset"
+              >
+                ×
+              </button>
+            )}
+          </span>
+        ))}
+        {savingPreset ? (
+          <span style={{ display: "inline-flex", gap: "0.25rem", alignItems: "center" }}>
+            <input
+              ref={saveInputRef}
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && savePreset()}
+              placeholder="name..."
+              style={{
+                width: "100px",
+                padding: "0.3rem 0.5rem",
+                fontSize: "0.75rem",
+                border: "1px solid #555",
+                borderRadius: "4px",
+                background: "#1a1a1a",
+                color: "#ccc",
+                outline: "none",
+              }}
+            />
+            <button className="preset-btn" onClick={savePreset}>Save</button>
+            <button className="preset-btn" onClick={() => setSavingPreset(false)}>Cancel</button>
+          </span>
+        ) : (
+          <button className="preset-btn" onClick={startSaving}>+ Save</button>
+        )}
+      </div>
+
       <div className="controls">
         <Slider
           label="Input Gain"
-          value={params.inputGain}
+          value={inputGain}
           min={0}
           max={2}
           step={0.01}
-          onChange={(v) => set("inputGain", v)}
+          onChange={setInputGain}
         />
         <Slider
           label="Output Vol"
@@ -200,59 +386,107 @@ export function RissetTapeDelay() {
           min={0}
           max={1}
           step={0.01}
-          onChange={(v) => setOutputVol(v)}
+          onChange={setOutputVol}
         />
         <Slider
-          label="Speed"
-          value={params.speed}
-          min={0.01}
-          max={2}
-          step={0.01}
+          label="Voices"
+          value={numVoices}
+          min={2}
+          max={MAX_VOICES}
+          step={1}
+          onChange={setNumVoices}
+        />
+        <Slider
+          label={`Speed ${dirLabel}`}
+          value={speed}
+          min={-SPEED_LIMIT}
+          max={SPEED_LIMIT}
+          step={0.001}
           unit="Hz"
-          onChange={(v) => set("speed", v)}
+          curve={2}
+          onChange={handleSpeed}
         />
-        <Slider
-          label="Range"
-          value={params.range}
-          min={0.1}
-          max={10}
-          step={0.1}
-          unit="s"
-          onChange={(v) => set("range", v)}
-        />
-
-        <div className="toggle-row">
-          <span className="toggle-label">Direction</span>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "0.7rem",
+            color: "#777",
+            cursor: "pointer",
+            userSelect: "none",
+            padding: "0 0 0 0.25rem",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={lockRatio}
+            onChange={(e) => setLockRatio(e.target.checked)}
+            style={{ accentColor: "#7060c0" }}
+          />
+          Lock |speed| Hz = range s
+          <span style={{ marginLeft: "auto", color: "#999", fontVariantNumeric: "tabular-nums" }}>
+            {pitchRatio.toFixed(2)}x / {semitones > 0 ? "+" : ""}{semitones} st
+          </span>
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{ flex: 1 }}>
+            <Slider
+              label="Range"
+              value={range}
+              min={RANGE_MIN}
+              max={RANGE_MAX}
+              step={0.001}
+              unit="s"
+              curve={2}
+              onChange={handleRange}
+            />
+          </div>
           <button
-            className={`toggle-btn ${params.directionUp ? "up" : "down"}`}
-            onClick={() => set("directionUp", !params.directionUp)}
+            onClick={handleTap}
+            style={{
+              padding: "0.35rem 0.6rem",
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              border: "1px solid #555",
+              borderRadius: "4px",
+              background: "#1e1e2e",
+              color: "#bbb",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+            title="Tap repeatedly to set range from tempo"
           >
-            {params.directionUp ? "↑ Up" : "↓ Down"}
+            Tap
           </button>
         </div>
 
-        <div className="info-row">
-          <span className="info-label">Pitch Shift</span>
-          <span className="info-value">
-            {pitchRatio.toFixed(2)}x ({semitones > 0 ? "+" : ""}{semitones} st)
-          </span>
-        </div>
+        <Slider
+          label="Tilt"
+          value={tilt}
+          min={-1}
+          max={1}
+          step={0.01}
+          onChange={setTilt}
+        />
 
         <Slider
           label="Feedback"
-          value={params.feedback}
+          value={feedback}
           min={0}
           max={0.95}
           step={0.01}
-          onChange={(v) => set("feedback", v)}
+          onChange={setFeedback}
         />
         <Slider
           label="Dry / Wet"
-          value={params.dryWet}
+          value={dryWet}
           min={0}
           max={1}
           step={0.01}
-          onChange={(v) => set("dryWet", v)}
+          onChange={setDryWet}
         />
       </div>
     </div>
