@@ -78,7 +78,7 @@ export function rissetTapeDelayGraph(
     const phaseOffset = index / numVoices;
 
     // Phasor with phase offset, wrapped to [0, 1)
-    const raw = el.phasor(smoothSpeed, 0);
+    const raw = el.phasor(smoothSpeed);
     const shifted = el.add(
       raw,
       el.const({ key: `rtd-ph-${index}`, value: phaseOffset })

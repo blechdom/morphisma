@@ -19,6 +19,7 @@ interface Preset {
   name: string;
   speed: number;
   range: number;
+  directionUp: boolean;
   numVoices: number;
   tilt: number;
   feedback: number;
@@ -27,28 +28,24 @@ interface Preset {
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Classic Shepard",  speed:  2.0,  range: 2.0, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7, inputGain: 1.0 },
-  { name: "Gentle Rise",      speed:  0.5,  range: 0.5, numVoices: 8,  tilt: 0,    feedback: 0.3, dryWet: 0.6, inputGain: 1.0 },
-  { name: "Warm Rise",        speed:  2.0,  range: 2.0, numVoices: 8,  tilt: -0.6, feedback: 0.4, dryWet: 0.7, inputGain: 1.0 },
-  { name: "Slow Fall",        speed: -0.3,  range: 0.3, numVoices: 8,  tilt: 0,    feedback: 0.5, dryWet: 0.7, inputGain: 1.0 },
-  { name: "Deep Spiral",      speed:  1.0,  range: 3.0, numVoices: 12, tilt: -0.3, feedback: 0.6, dryWet: 0.8, inputGain: 1.0 },
-  { name: "Fast Shimmer",     speed:  4.0,  range: 4.0, numVoices: 6,  tilt: 0,    feedback: 0.2, dryWet: 0.5, inputGain: 1.0 },
-  { name: "Frozen",           speed:  0.1,  range: 0.1, numVoices: 12, tilt: 0,    feedback: 0.9, dryWet: 0.9, inputGain: 0.8 },
-  { name: "Descent",          speed: -2.0,  range: 2.0, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7, inputGain: 1.0 },
-  { name: "Wide & Slow",      speed:  0.2,  range: 6.0, numVoices: 10, tilt: 0,    feedback: 0.7, dryWet: 0.85, inputGain: 1.0 },
+  { name: "Classic Shepard",  speed: 2.0, range: 2.0, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
+  { name: "Gentle Rise",      speed: 0.5, range: 0.5, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.3, dryWet: 0.6,  inputGain: 1.0 },
+  { name: "Warm Rise",        speed: 2.0, range: 2.0, directionUp: true,  numVoices: 8,  tilt: -0.6, feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
+  { name: "Slow Fall",        speed: 0.3, range: 0.3, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.5, dryWet: 0.7,  inputGain: 1.0 },
+  { name: "Deep Spiral",      speed: 1.0, range: 3.0, directionUp: true,  numVoices: 12, tilt: -0.3, feedback: 0.6, dryWet: 0.8,  inputGain: 1.0 },
+  { name: "Fast Shimmer",     speed: 4.0, range: 4.0, directionUp: true,  numVoices: 6,  tilt: 0,    feedback: 0.2, dryWet: 0.5,  inputGain: 1.0 },
+  { name: "Frozen",           speed: 0.1, range: 0.1, directionUp: true,  numVoices: 12, tilt: 0,    feedback: 0.9, dryWet: 0.9,  inputGain: 0.8 },
+  { name: "Descent",          speed: 2.0, range: 2.0, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
+  { name: "Wide & Slow",      speed: 0.2, range: 6.0, directionUp: true,  numVoices: 10, tilt: 0,    feedback: 0.7, dryWet: 0.85, inputGain: 1.0 },
 ];
 
 function deriveParams(
   speed: number,
   range: number,
+  directionUp: boolean,
   rest: Omit<RissetTapeDelayParams, "speed" | "range" | "directionUp">
 ): RissetTapeDelayParams {
-  return {
-    ...rest,
-    speed: Math.abs(speed),
-    range,
-    directionUp: speed >= 0,
-  };
+  return { ...rest, speed, range, directionUp };
 }
 
 export function RissetTapeDelay() {
@@ -59,6 +56,7 @@ export function RissetTapeDelay() {
 
   const [speed, setSpeed] = useState(2.0);
   const [range, setRange] = useState(2.0);
+  const [dirUp, setDirUp] = useState(true);
   const [numVoices, setNumVoices] = useState(8);
   const [tilt, setTilt] = useState(0);
   const [feedback, setFeedback] = useState(0.4);
@@ -78,13 +76,11 @@ export function RissetTapeDelay() {
   const sourceConnectedRef = useRef(false);
   playingRef.current = playing;
 
-  const absSpeed = Math.abs(speed);
-  const pitchProduct = absSpeed * range;
-  const dirUp = speed >= 0;
+  const pitchProduct = speed * range;
   const pitchRatio = dirUp ? 1 + pitchProduct : Math.max(1 - pitchProduct, 0.01);
   const semitones = Math.round(12 * Math.log2(Math.max(pitchRatio, 0.01)));
 
-  const params = deriveParams(speed, range, {
+  const params = deriveParams(speed, range, dirUp, {
     numVoices,
     tilt,
     feedback,
@@ -180,20 +176,18 @@ export function RissetTapeDelay() {
     }
   }, [fileUrl]);
 
-  // Lock: |speed| Hz = range s (mirror the numbers)
   const handleSpeed = (newSpeed: number) => {
-    if (lockRatio) {
-      const clamped = Math.min(RANGE_MAX, Math.max(RANGE_MIN, Math.abs(newSpeed)));
-      setRange(Math.round(clamped * 10) / 10);
+    if (lockRatio && newSpeed > 0) {
+      const r = Math.min(RANGE_MAX, Math.max(RANGE_MIN, 1 / newSpeed));
+      setRange(Math.round(r * 1000) / 1000);
     }
     setSpeed(newSpeed);
   };
 
   const handleRange = (newRange: number) => {
-    if (lockRatio) {
-      const sign = speed >= 0 ? 1 : -1;
-      const clamped = Math.min(SPEED_LIMIT, newRange);
-      setSpeed(Math.round(sign * clamped * 100) / 100);
+    if (lockRatio && newRange > 0) {
+      const s = Math.min(SPEED_LIMIT, 1 / newRange);
+      setSpeed(Math.round(s * 1000) / 1000);
     }
     setRange(newRange);
   };
@@ -218,6 +212,7 @@ export function RissetTapeDelay() {
   const applyPreset = (p: Preset) => {
     setSpeed(p.speed);
     setRange(p.range);
+    setDirUp(p.directionUp);
     setNumVoices(p.numVoices);
     setTilt(p.tilt);
     setFeedback(p.feedback);
@@ -236,7 +231,7 @@ export function RissetTapeDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, numVoices, tilt, feedback, dryWet, inputGain },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, dryWet, inputGain },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -246,7 +241,6 @@ export function RissetTapeDelay() {
     setCustomPresets((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const dirLabel = speed > 0 ? "↑" : speed < 0 ? "↓" : "—";
   const allPresets = [...BUILT_IN_PRESETS, ...customPresets];
 
   return (
@@ -397,38 +391,47 @@ export function RissetTapeDelay() {
           onChange={setNumVoices}
         />
         <Slider
-          label={`Speed ${dirLabel}`}
+          label="Speed"
           value={speed}
-          min={-SPEED_LIMIT}
+          min={0}
           max={SPEED_LIMIT}
           step={0.001}
           unit="Hz"
           curve={2}
           onChange={handleSpeed}
         />
-        <label
+        <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "0.5rem",
+            gap: "1rem",
             fontSize: "0.7rem",
             color: "#777",
-            cursor: "pointer",
-            userSelect: "none",
             padding: "0 0 0 0.25rem",
           }}
         >
-          <input
-            type="checkbox"
-            checked={lockRatio}
-            onChange={(e) => setLockRatio(e.target.checked)}
-            style={{ accentColor: "#7060c0" }}
-          />
-          Lock |speed| Hz = range s
+          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", userSelect: "none" }}>
+            <input
+              type="checkbox"
+              checked={dirUp}
+              onChange={(e) => setDirUp(e.target.checked)}
+              style={{ accentColor: "#7060c0" }}
+            />
+            {dirUp ? "Up" : "Down"}
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", userSelect: "none" }}>
+            <input
+              type="checkbox"
+              checked={lockRatio}
+              onChange={(e) => setLockRatio(e.target.checked)}
+              style={{ accentColor: "#7060c0" }}
+            />
+            Lock range = 1/speed
+          </label>
           <span style={{ marginLeft: "auto", color: "#999", fontVariantNumeric: "tabular-nums" }}>
             {pitchRatio.toFixed(2)}x / {semitones > 0 ? "+" : ""}{semitones} st
           </span>
-        </label>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <div style={{ flex: 1 }}>
             <Slider

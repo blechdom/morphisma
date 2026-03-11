@@ -17,7 +17,7 @@ function phasedPhasor(key: string, speed: number, phaseOffset: number) {
     el.const({ key: "phased-phasor-speed", value: speed })
   );
   const t = el.add(
-    el.phasor(smoothSpeed, 0),
+    el.phasor(smoothSpeed),
     el.sm(el.const({ key: `${key}:offset`, value: phaseOffset }))
   );
   return el.sub(t, el.floor(t));
