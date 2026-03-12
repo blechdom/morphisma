@@ -8,6 +8,7 @@ export interface ShepardDelayGlobalFeedbackParams {
   dryWet: number;
   feedback: number;
   inputGain: number;
+  stereoSpread: number;
 }
 
 const MAX_BUFFER_SECONDS = 30;
@@ -48,6 +49,7 @@ export function shepardDelayGlobalFeedbackGraph(
     dryWet,
     feedback,
     inputGain,
+    stereoSpread,
   } = params;
 
   const rawInputs: [NodeRepr_t, NodeRepr_t] = [
@@ -112,52 +114,102 @@ export function shepardDelayGlobalFeedbackGraph(
     return { raw: scaled as NodeRepr_t, shaped: enveloped as NodeRepr_t };
   }
 
-  function buildChannel(channel: 0 | 1): NodeRepr_t {
-    const input = el.mul(rawInputs[channel], smoothInputGain) as NodeRepr_t;
-    const tapName = `global-fb-${channel}`;
-    const fbSignal = el.tapIn({ name: tapName }) as NodeRepr_t;
-    const combinedInput = el.add(
-      input,
-      el.mul(fbSignal, smoothFeedback)
-    ) as NodeRepr_t;
+  const inputL = el.mul(rawInputs[0], smoothInputGain) as NodeRepr_t;
+  const inputR = el.mul(rawInputs[1], smoothInputGain) as NodeRepr_t;
 
-    const rawVoices: NodeRepr_t[] = [];
-    const shapedVoices: NodeRepr_t[] = [];
+  const fbSignalL = el.tapIn({ name: "global-fb-0" }) as NodeRepr_t;
+  const fbSignalR = el.tapIn({ name: "global-fb-1" }) as NodeRepr_t;
 
-    for (let i = 0; i < numVoices; i++) {
-      const { raw, shaped } = grainVoice(
-        `ch${channel}:voice-${i}`,
-        i / numVoices,
-        combinedInput
-      );
-      rawVoices.push(raw);
-      shapedVoices.push(shaped);
-    }
+  const combinedInputL = el.add(
+    inputL,
+    el.mul(fbSignalL, smoothFeedback)
+  ) as NodeRepr_t;
+  const combinedInputR = el.add(
+    inputR,
+    el.mul(fbSignalR, smoothFeedback)
+  ) as NodeRepr_t;
 
-    // Raw sum (no envelope) feeds back through the global loop.
-    const rawSum = addMany(rawVoices);
-    const wetWithTap = el.tapOut(
-      { name: tapName },
-      rawSum
-    ) as NodeRepr_t;
+  const rawVoicesL: NodeRepr_t[] = [];
+  const rawVoicesR: NodeRepr_t[] = [];
+  const shapedVoicesL: NodeRepr_t[] = [];
+  const shapedVoicesR: NodeRepr_t[] = [];
+  const pannedVoicesL: NodeRepr_t[] = [];
+  const pannedVoicesR: NodeRepr_t[] = [];
 
-    // Enveloped sum is the audible wet signal.
-    const wetSignal = addMany(shapedVoices);
+  for (let i = 0; i < numVoices; i++) {
+    const phaseOffset = i / numVoices;
+    const leftVoice = grainVoice(`ch0:voice-${i}`, phaseOffset, combinedInputL);
+    const rightVoice = grainVoice(`ch1:voice-${i}`, phaseOffset, combinedInputR);
 
-    const dry = el.mul(
-      input,
-      el.sm(el.const({ key: `dry-gain:${channel}`, value: 1 - dryWet }))
-    ) as NodeRepr_t;
-    const wet = el.mul(
-      wetSignal,
-      el.sm(el.const({ key: `wet-gain:${channel}`, value: dryWet }))
-    ) as NodeRepr_t;
+    rawVoicesL.push(leftVoice.raw);
+    rawVoicesR.push(rightVoice.raw);
+    shapedVoicesL.push(leftVoice.shaped);
+    shapedVoicesR.push(rightVoice.shaped);
 
-    // Keep tapOut in the rendered graph so the feedback loop executes.
-    const fbSink = el.mul(wetWithTap, 0) as NodeRepr_t;
-
-    return el.add(dry, wet, fbSink) as NodeRepr_t;
+    const monoVoice = el.mul(el.add(leftVoice.shaped, rightVoice.shaped), 0.5) as NodeRepr_t;
+    const pan = numVoices > 1 ? (i / (numVoices - 1)) * 2 - 1 : 0;
+    const panLeft = Math.sqrt((1 - pan) * 0.5);
+    const panRight = Math.sqrt((1 + pan) * 0.5);
+    pannedVoicesL.push(el.mul(monoVoice, panLeft) as NodeRepr_t);
+    pannedVoicesR.push(el.mul(monoVoice, panRight) as NodeRepr_t);
   }
 
-  return [buildChannel(0), buildChannel(1)];
+  const rawSumL = addMany(rawVoicesL);
+  const rawSumR = addMany(rawVoicesR);
+  const wetWithTapL = el.tapOut({ name: "global-fb-0" }, rawSumL) as NodeRepr_t;
+  const wetWithTapR = el.tapOut({ name: "global-fb-1" }, rawSumR) as NodeRepr_t;
+
+  const wetDefaultL = addMany(shapedVoicesL);
+  const wetDefaultR = addMany(shapedVoicesR);
+  const wetPannedL = addMany(pannedVoicesL);
+  const wetPannedR = addMany(pannedVoicesR);
+
+  const spread = el.sm(el.const({ key: "stereo-spread", value: stereoSpread }));
+  const wetBlendLinearL = el.add(
+    el.mul(wetDefaultL, el.sub(1, spread)),
+    el.mul(wetPannedL, spread)
+  ) as NodeRepr_t;
+  const wetBlendLinearR = el.add(
+    el.mul(wetDefaultR, el.sub(1, spread)),
+    el.mul(wetPannedR, spread)
+  ) as NodeRepr_t;
+  const spreadAtZero = el.le(spread, 0.0001);
+  const spreadAtOne = el.ge(spread, 0.9999);
+  const wetBlendL = el.select(
+    spreadAtZero,
+    wetDefaultL,
+    el.select(spreadAtOne, wetPannedL, wetBlendLinearL)
+  ) as NodeRepr_t;
+  const wetBlendR = el.select(
+    spreadAtZero,
+    wetDefaultR,
+    el.select(spreadAtOne, wetPannedR, wetBlendLinearR)
+  ) as NodeRepr_t;
+
+  const dryL = el.mul(
+    inputL,
+    el.sm(el.const({ key: "dry-gain:0", value: 1 - dryWet }))
+  ) as NodeRepr_t;
+  const dryR = el.mul(
+    inputR,
+    el.sm(el.const({ key: "dry-gain:1", value: 1 - dryWet }))
+  ) as NodeRepr_t;
+
+  const wetL = el.mul(
+    wetBlendL,
+    el.sm(el.const({ key: "wet-gain:0", value: dryWet }))
+  ) as NodeRepr_t;
+  const wetR = el.mul(
+    wetBlendR,
+    el.sm(el.const({ key: "wet-gain:1", value: dryWet }))
+  ) as NodeRepr_t;
+
+  // Keep tapOut in the rendered graph so both feedback loops execute.
+  const fbSinkL = el.mul(wetWithTapL, 0) as NodeRepr_t;
+  const fbSinkR = el.mul(wetWithTapR, 0) as NodeRepr_t;
+
+  return [
+    el.add(dryL, wetL, fbSinkL) as NodeRepr_t,
+    el.add(dryR, wetR, fbSinkR) as NodeRepr_t,
+  ];
 }
