@@ -52,9 +52,12 @@ export function ShepardDelay() {
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const playingRef = useRef(playing);
+  const playingRef = useRef(false);
   const sourceConnectedRef = useRef(false);
-  playingRef.current = playing;
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   const computedMinDelay = Math.max(
     params.maxDelayMs / (params.intervalRatio * params.numVoices),
@@ -104,7 +107,7 @@ export function ShepardDelay() {
         console.error("Failed to connect source:", err);
       }
     },
-    [fileUrl]
+    []
   );
 
   const togglePlay = async () => {
@@ -147,7 +150,7 @@ export function ShepardDelay() {
     if (playing && source === "file" && sourceConnectedRef.current) {
       audioRef.current.play();
     }
-  }, [fileUrl]);
+  }, [fileUrl, playing, source]);
 
   const applyPreset = (index: number) => {
     setParams(presetToParams(PRESETS[index]));

@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@elemaudio/core": "^4.0.0",
+    "@elemaudio/core": "^4.0.3",
     "@elemaudio/web-renderer": "^4.0.0",
     "next": "^16.1.6",
     "react": "^19.0.0",

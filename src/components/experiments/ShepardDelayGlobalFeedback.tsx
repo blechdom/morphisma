@@ -10,17 +10,17 @@ import { Slider } from "@/components/Slider";
 
 type Source = "mic" | "file";
 
-type Preset = [number, number, number, boolean, number, number, number];
+type Preset = [number, number, number, boolean, number, number, number, number];
 
 const PRESETS: Preset[] = [
-  //  voices  speed  ratio  up     wet   fb    gain
-  [6,       0.15,  2.0,   true,  0.8,  0.0,  1.0],
-  [6,       0.15,  2.0,   false, 0.8,  0.0,  1.0],
-  [6,       0.05,  2.0,   true,  0.8,  0.0,  1.0],
-  [6,       0.5,   2.0,   true,  0.8,  0.0,  1.0],
-  [6,       0.15,  2.0,   true,  0.7,  0.6,  1.0],
-  [8,       0.15,  3.0,   true,  0.7,  0.5,  1.0],
-  [8,       0.1,   2.0,   true,  0.6,  0.9,  1.0],
+  //  voices  speed  ratio  up     wet   fb    gain  spread
+  [6,       0.15,  2.0,   true,  0.8,  0.0,  1.0,  0.0],
+  [6,       0.15,  2.0,   false, 0.8,  0.0,  1.0,  0.0],
+  [6,       0.05,  2.0,   true,  0.8,  0.0,  1.0,  0.0],
+  [6,       0.5,   2.0,   true,  0.8,  0.0,  1.0,  0.0],
+  [6,       0.15,  2.0,   true,  0.7,  0.6,  1.0,  0.3],
+  [8,       0.15,  3.0,   true,  0.7,  0.5,  1.0,  0.6],
+  [8,       0.1,   2.0,   true,  0.6,  0.9,  1.0,  1.0],
 ];
 
 const PRESET_NAMES = [
@@ -42,6 +42,7 @@ function presetToParams(p: Preset): ShepardDelayGlobalFeedbackParams {
     dryWet: p[4],
     feedback: p[5],
     inputGain: p[6],
+    stereoSpread: p[7],
   };
 }
 
@@ -56,9 +57,12 @@ export function ShepardDelayGlobalFeedback() {
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const playingRef = useRef(playing);
+  const playingRef = useRef(false);
   const sourceConnectedRef = useRef(false);
-  playingRef.current = playing;
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   const K = params.directionUp
     ? params.intervalRatio - 1
@@ -82,13 +86,14 @@ export function ShepardDelayGlobalFeedback() {
   const buildAndRender = useCallback(() => {
     if (!playing) return;
     const sr = engine.getSampleRate();
-    const graph = shepardDelayGlobalFeedbackGraph(params, sr);
-    const gained = el.mul(
-      graph,
-      el.sm(el.const({ key: "output-vol", value: outputVol }))
-    ) as NodeRepr_t;
-    const scoped = el.scope({ name: "scope" }, gained);
-    engine.render(scoped as NodeRepr_t);
+    const [left, right] = shepardDelayGlobalFeedbackGraph(params, sr);
+    const smoothOutputVol = el.sm(
+      el.const({ key: "output-vol", value: outputVol })
+    );
+    const gainedLeft = el.mul(left, smoothOutputVol) as NodeRepr_t;
+    const gainedRight = el.mul(right, smoothOutputVol) as NodeRepr_t;
+    const scopedLeft = el.scope({ name: "scope" }, gainedLeft);
+    engine.render(scopedLeft, gainedRight);
   }, [playing, params, outputVol]);
 
   useEffect(() => {
@@ -112,7 +117,7 @@ export function ShepardDelayGlobalFeedback() {
         console.error("Failed to connect source:", err);
       }
     },
-    [fileUrl]
+    []
   );
 
   const togglePlay = async () => {
@@ -155,7 +160,7 @@ export function ShepardDelayGlobalFeedback() {
     if (playing && source === "file" && sourceConnectedRef.current) {
       audioRef.current.play();
     }
-  }, [fileUrl]);
+  }, [fileUrl, playing, source]);
 
   const applyPreset = (index: number) => {
     setParams(presetToParams(PRESETS[index]));
@@ -271,6 +276,14 @@ export function ShepardDelayGlobalFeedback() {
           max={0.99}
           step={0.01}
           onChange={(v) => set("feedback", v)}
+        />
+        <Slider
+          label="Stereo Spread"
+          value={params.stereoSpread}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={(v) => set("stereoSpread", v)}
         />
 
         <div className="toggle-row">

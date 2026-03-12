@@ -9,6 +9,7 @@ let initializing = false;
 
 let micStream: MediaStream | null = null;
 let currentSource: AudioNode | null = null;
+let currentSplitter: ChannelSplitterNode | null = null;
 const elementSources = new WeakMap<
   HTMLAudioElement,
   MediaElementAudioSourceNode
@@ -45,7 +46,8 @@ export async function ensureInitialized(): Promise<WebRenderer> {
   });
 
   const node = await core.initialize(ctx, {
-    numberOfInputs: 1,
+    // Elementary's web-renderer maps this to native input channel count.
+    numberOfInputs: 2,
     numberOfOutputs: 1,
     outputChannelCount: [2],
   });
@@ -63,7 +65,10 @@ export async function connectMic(): Promise<void> {
   if (!ctx || !elemNode) throw new Error("Engine not initialized");
   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   currentSource = ctx.createMediaStreamSource(micStream);
-  currentSource.connect(elemNode);
+  currentSplitter = ctx.createChannelSplitter(2);
+  currentSource.connect(currentSplitter);
+  currentSplitter.connect(elemNode, 0, 0);
+  currentSplitter.connect(elemNode, 1, 1);
 }
 
 export function connectFileElement(audioEl: HTMLAudioElement): void {
@@ -74,11 +79,16 @@ export function connectFileElement(audioEl: HTMLAudioElement): void {
     source = ctx.createMediaElementSource(audioEl);
     elementSources.set(audioEl, source);
   }
-  source.connect(elemNode);
+  currentSplitter = ctx.createChannelSplitter(2);
+  source.connect(currentSplitter);
+  currentSplitter.connect(elemNode, 0, 0);
+  currentSplitter.connect(elemNode, 1, 1);
   currentSource = source;
 }
 
 export function disconnectSource(): void {
+  currentSplitter?.disconnect();
+  currentSplitter = null;
   currentSource?.disconnect();
   currentSource = null;
   if (micStream) {
@@ -87,9 +97,9 @@ export function disconnectSource(): void {
   }
 }
 
-export function render(signal: NodeRepr_t) {
+export function render(left: NodeRepr_t, right: NodeRepr_t = left) {
   if (core && initialized) {
-    core.render(signal, signal);
+    core.render(left, right);
   }
 }
 

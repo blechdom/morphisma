@@ -72,9 +72,12 @@ export function RissetTapeDelay() {
   const tapTimesRef = useRef<number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const playingRef = useRef(playing);
+  const playingRef = useRef(false);
   const sourceConnectedRef = useRef(false);
-  playingRef.current = playing;
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   const pitchProduct = speed * range;
   const pitchRatio = dirUp ? 1 + pitchProduct : Math.max(1 - pitchProduct, 0.01);
@@ -131,7 +134,7 @@ export function RissetTapeDelay() {
         console.error("Failed to connect source:", err);
       }
     },
-    [fileUrl]
+    []
   );
 
   const togglePlay = async () => {
@@ -174,7 +177,7 @@ export function RissetTapeDelay() {
     if (playing && source === "file" && sourceConnectedRef.current) {
       audioRef.current.play();
     }
-  }, [fileUrl]);
+  }, [fileUrl, playing, source]);
 
   const handleSpeed = (newSpeed: number) => {
     if (lockRatio && newSpeed > 0) {
