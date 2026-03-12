@@ -39,7 +39,7 @@ function addMany(ins: NodeRepr_t[]): NodeRepr_t {
 export function shepardDelayGlobalFeedbackGraph(
   params: ShepardDelayGlobalFeedbackParams,
   sampleRate: number
-): NodeRepr_t {
+): [NodeRepr_t, NodeRepr_t] {
   const {
     numVoices,
     speed,
@@ -50,11 +50,11 @@ export function shepardDelayGlobalFeedbackGraph(
     inputGain,
   } = params;
 
-  const rawInput = el.in({ channel: 0 }) as NodeRepr_t;
-  const input = el.mul(
-    rawInput,
-    el.sm(el.const({ key: "input-gain", value: inputGain }))
-  ) as NodeRepr_t;
+  const rawInputs: [NodeRepr_t, NodeRepr_t] = [
+    el.in({ channel: 0 }) as NodeRepr_t,
+    el.in({ channel: 1 }) as NodeRepr_t,
+  ];
+  const smoothInputGain = el.sm(el.const({ key: "input-gain", value: inputGain }));
 
   const maxBufferSamples = Math.ceil(MAX_BUFFER_SECONDS * sampleRate);
 
@@ -83,17 +83,12 @@ export function shepardDelayGlobalFeedbackGraph(
   const smoothFeedback = el.sm(
     el.const({ key: "global-feedback", value: feedback })
   );
-  const fbSignal = el.tapIn({ name: "global-fb" }) as NodeRepr_t;
-  const combinedInput = el.add(
-    input,
-    el.mul(fbSignal, smoothFeedback)
-  ) as NodeRepr_t;
 
   const ampScale = el.sm(
     el.const({ key: "scale-amp", value: 1 / numVoices })
   );
 
-  function grainVoice(key: string, phaseOffset: number) {
+  function grainVoice(key: string, phaseOffset: number, channelInput: NodeRepr_t) {
     const phasor = phasedPhasor(key, speed, phaseOffset);
     const phasorSq = el.mul(phasor, phasor);
 
@@ -107,7 +102,7 @@ export function shepardDelayGlobalFeedbackGraph(
       { size: maxBufferSamples },
       delaySamples,
       0,
-      combinedInput
+      channelInput
     );
 
     const envelope = phasedEnvelope(key, speed, phaseOffset);
@@ -117,36 +112,52 @@ export function shepardDelayGlobalFeedbackGraph(
     return { raw: scaled as NodeRepr_t, shaped: enveloped as NodeRepr_t };
   }
 
-  const rawVoices: NodeRepr_t[] = [];
-  const shapedVoices: NodeRepr_t[] = [];
+  function buildChannel(channel: 0 | 1): NodeRepr_t {
+    const input = el.mul(rawInputs[channel], smoothInputGain) as NodeRepr_t;
+    const tapName = `global-fb-${channel}`;
+    const fbSignal = el.tapIn({ name: tapName }) as NodeRepr_t;
+    const combinedInput = el.add(
+      input,
+      el.mul(fbSignal, smoothFeedback)
+    ) as NodeRepr_t;
 
-  for (let i = 0; i < numVoices; i++) {
-    const { raw, shaped } = grainVoice(`voice-${i}`, i / numVoices);
-    rawVoices.push(raw);
-    shapedVoices.push(shaped);
+    const rawVoices: NodeRepr_t[] = [];
+    const shapedVoices: NodeRepr_t[] = [];
+
+    for (let i = 0; i < numVoices; i++) {
+      const { raw, shaped } = grainVoice(
+        `ch${channel}:voice-${i}`,
+        i / numVoices,
+        combinedInput
+      );
+      rawVoices.push(raw);
+      shapedVoices.push(shaped);
+    }
+
+    // Raw sum (no envelope) feeds back through the global loop.
+    const rawSum = addMany(rawVoices);
+    const wetWithTap = el.tapOut(
+      { name: tapName },
+      rawSum
+    ) as NodeRepr_t;
+
+    // Enveloped sum is the audible wet signal.
+    const wetSignal = addMany(shapedVoices);
+
+    const dry = el.mul(
+      input,
+      el.sm(el.const({ key: `dry-gain:${channel}`, value: 1 - dryWet }))
+    ) as NodeRepr_t;
+    const wet = el.mul(
+      wetSignal,
+      el.sm(el.const({ key: `wet-gain:${channel}`, value: dryWet }))
+    ) as NodeRepr_t;
+
+    // Keep tapOut in the rendered graph so the feedback loop executes.
+    const fbSink = el.mul(wetWithTap, 0) as NodeRepr_t;
+
+    return el.add(dry, wet, fbSink) as NodeRepr_t;
   }
 
-  // Raw sum (no envelope) feeds back through the global loop
-  const rawSum = addMany(rawVoices);
-  const wetWithTap = el.tapOut(
-    { name: "global-fb" },
-    rawSum
-  ) as NodeRepr_t;
-
-  // Enveloped sum is the audible wet signal
-  const wetSignal = addMany(shapedVoices);
-
-  const dry = el.mul(
-    input,
-    el.sm(el.const({ key: "dry-gain", value: 1 - dryWet }))
-  ) as NodeRepr_t;
-  const wet = el.mul(
-    wetSignal,
-    el.sm(el.const({ key: "wet-gain", value: dryWet }))
-  ) as NodeRepr_t;
-
-  // Keep tapOut in the rendered graph so the feedback loop executes
-  const fbSink = el.mul(wetWithTap, 0) as NodeRepr_t;
-
-  return el.add(dry, wet, fbSink) as NodeRepr_t;
+  return [buildChannel(0), buildChannel(1)];
 }

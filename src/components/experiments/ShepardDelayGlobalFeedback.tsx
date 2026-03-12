@@ -56,9 +56,12 @@ export function ShepardDelayGlobalFeedback() {
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const playingRef = useRef(playing);
+  const playingRef = useRef(false);
   const sourceConnectedRef = useRef(false);
-  playingRef.current = playing;
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   const K = params.directionUp
     ? params.intervalRatio - 1
@@ -82,13 +85,15 @@ export function ShepardDelayGlobalFeedback() {
   const buildAndRender = useCallback(() => {
     if (!playing) return;
     const sr = engine.getSampleRate();
-    const graph = shepardDelayGlobalFeedbackGraph(params, sr);
-    const gained = el.mul(
-      graph,
-      el.sm(el.const({ key: "output-vol", value: outputVol }))
-    ) as NodeRepr_t;
-    const scoped = el.scope({ name: "scope" }, gained);
-    engine.render(scoped as NodeRepr_t);
+    const [left, right] = shepardDelayGlobalFeedbackGraph(params, sr);
+    console.log('right', right);
+    const smoothOutputVol = el.sm(
+      el.const({ key: "output-vol", value: outputVol })
+    );
+    const gainedLeft = el.mul(left, smoothOutputVol) as NodeRepr_t;
+    const gainedRight = el.mul(right, smoothOutputVol) as NodeRepr_t;
+    const scopedLeft = el.scope({ name: "scope", channels: 1 }, gainedLeft);
+    engine.render(scopedLeft, gainedRight);
   }, [playing, params, outputVol]);
 
   useEffect(() => {
@@ -112,7 +117,7 @@ export function ShepardDelayGlobalFeedback() {
         console.error("Failed to connect source:", err);
       }
     },
-    [fileUrl]
+    []
   );
 
   const togglePlay = async () => {
@@ -155,7 +160,7 @@ export function ShepardDelayGlobalFeedback() {
     if (playing && source === "file" && sourceConnectedRef.current) {
       audioRef.current.play();
     }
-  }, [fileUrl]);
+  }, [fileUrl, playing, source]);
 
   const applyPreset = (index: number) => {
     setParams(presetToParams(PRESETS[index]));

@@ -43,9 +43,12 @@ export function TapeDelay() {
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const playingRef = useRef(playing);
+  const playingRef = useRef(false);
   const sourceConnectedRef = useRef(false);
-  playingRef.current = playing;
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   useEffect(() => {
     engine.onScope((data) => {
@@ -90,7 +93,7 @@ export function TapeDelay() {
         console.error("Failed to connect source:", err);
       }
     },
-    [fileUrl]
+    []
   );
 
   const togglePlay = async () => {
@@ -133,7 +136,7 @@ export function TapeDelay() {
     if (playing && source === "file" && sourceConnectedRef.current) {
       audioRef.current.play();
     }
-  }, [fileUrl]);
+  }, [fileUrl, playing, source]);
 
   const set = <K extends keyof TapeDelayParams>(
     key: K,
@@ -169,7 +172,7 @@ export function TapeDelay() {
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
         Circular buffer with a record head and up to {MAX_HEADS} movable play
-        heads. Drag each head's <em>Delay Time</em> to sweep it across the tape.
+        heads. Drag each head&apos;s <em>Delay Time</em> to sweep it across the tape.
       </p>
 
       <div className="source-bar">

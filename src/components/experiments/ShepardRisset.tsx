@@ -36,8 +36,11 @@ export function ShepardRisset() {
   );
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
 
-  const playingRef = useRef(playing);
-  playingRef.current = playing;
+  const playingRef = useRef(false);
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   useEffect(() => {
     engine.onScope((data) => {

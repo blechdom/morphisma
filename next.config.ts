@@ -1,9 +1,11 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: "export",
-  basePath: "/morphisma",
+  output: isProd ? "export" : undefined,
+  basePath: isProd ? "/morphisma" : undefined,
   images: { unoptimized: true },
 };
 
