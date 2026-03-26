@@ -18,36 +18,29 @@ const STRIPES = [
   { color: "rgba(50,180,120,0.4)",   width: 44 },
   { color: "rgba(60,40,140,0.4)",    width: 44 },
 ];
-const SINE_AMP = 14;
-const SINE_PERIOD = 260;
 const CANVAS = 3000;
-const PATH_STEPS = 80;
-
-function sineStripePath(topY: number, height: number): string {
-  const botY = topY + height;
-  let d = "";
-  for (let s = 0; s <= PATH_STEPS; s++) {
-    const x = (s / PATH_STEPS) * CANVAS;
-    const y = topY + SINE_AMP * Math.sin((2 * Math.PI * x) / SINE_PERIOD);
-    d += s === 0 ? `M${x},${y}` : `L${x},${y}`;
-  }
-  for (let s = PATH_STEPS; s >= 0; s--) {
-    const x = (s / PATH_STEPS) * CANVAS;
-    const y = botY + SINE_AMP * Math.sin((2 * Math.PI * x) / SINE_PERIOD);
-    d += `L${x},${y}`;
-  }
-  return d + "Z";
-}
+const TAPER = 0.85;
 
 const STRIPE_PATHS: { d: string; fill: string }[] = [];
 {
-  let y = 0;
-  while (y < CANVAS) {
-    for (const { color, width } of STRIPES) {
-      if (y >= CANVAS) break;
-      STRIPE_PATHS.push({ d: sineStripePath(y, width), fill: color });
-      y += width;
-    }
+  let yL = 0;
+  let yR = 0;
+  let idx = 0;
+  while (yL < CANVAS || yR < CANVAS) {
+    const s = STRIPES[idx % STRIPES.length];
+    const wider = s.width * (1 + TAPER);
+    const narrower = s.width * (1 - TAPER);
+    const hL = idx % 2 === 0 ? wider : narrower;
+    const hR = idx % 2 === 0 ? narrower : wider;
+    const topL = yL, botL = yL + hL;
+    const topR = yR, botR = yR + hR;
+    STRIPE_PATHS.push({
+      d: `M0,${topL} L${CANVAS},${topR} L${CANVAS},${botR} L0,${botL} Z`,
+      fill: s.color,
+    });
+    yL = botL;
+    yR = botR;
+    idx++;
   }
 }
 
@@ -69,18 +62,30 @@ interface Preset {
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Gentle Rise",     speed: 0.15,  range: 3.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.8,  grainSize: 0.06 },
-  { name: "Wide Climb",      speed: 0.08,  range: 6.0,  directionUp: true,  numVoices: 12, tilt: -0.3,  feedback: 0.0,  fbDelay: 6.0,   dryWet: 0.85, grainSize: 0.04 },
-  { name: "Dual Grind",      speed: 1.309, range: 1.0,  directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 2.0,   dryWet: 1.0,  grainSize: 0.02 },
-  { name: "Full Spectrum",   speed: 0.05,  range: 8.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 8.0,   dryWet: 0.9,  grainSize: 0.04 },
-  { name: "Tight Octave",    speed: 0.5,   range: 1.0,  directionUp: true,  numVoices: 4,  tilt: 0.5,   feedback: 0.6,  fbDelay: 2.0,   dryWet: 0.6,  grainSize: 0.08 },
-  { name: "Deep Plunge",     speed: 0.12,  range: 4.0,  directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 5.0,   dryWet: 0.8,  grainSize: 0.05 },
-  { name: "Glacial Sweep",   speed: 0.02,  range: 10.0, directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.85, fbDelay: 10.0,  dryWet: 1.0,  grainSize: 0.03 },
-  { name: "Fast Shimmer",    speed: 1.0,   range: 2.0,  directionUp: true,  numVoices: 6,  tilt: 0.6,   feedback: 0.4,  fbDelay: 2.0,   dryWet: 0.65, grainSize: 0.015 },
-  { name: "Falling Deep",    speed: 0.2,   range: 4.0,  directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 4.0,   dryWet: 0.8,  grainSize: 0.05 },
-  { name: "Frozen Lake",     speed: 0.01,  range: 6.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 8.0,   dryWet: 1.0,  grainSize: 0.04 },
-  { name: "Narrow Wobble",   speed: 0.8,   range: 0.5,  directionUp: true,  numVoices: 8,  tilt: -0.4,  feedback: 0.5,  fbDelay: 2.0,   dryWet: 0.55, grainSize: 0.1 },
-  { name: "Cosmic Descent",  speed: 0.06,  range: 8.0,  directionUp: false, numVoices: 12, tilt: -0.2,  feedback: 0.8,  fbDelay: 6.0,   dryWet: 0.95, grainSize: 0.03 },
+  // Classic Shepard illusion — steady tone in, endless rise out
+  { name: "Classic Rise",      speed: 0.08,  range: 4.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.05 },
+  // Mirror image — same shape, falling
+  { name: "Classic Fall",      speed: 0.08,  range: 4.0,  directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.05 },
+  // Very slow, very deep buffer — glacial pitch drift
+  { name: "Glacial Drift",     speed: 0.015, range: 8.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.75, fbDelay: 12.0,  dryWet: 1.0,  grainSize: 0.04 },
+  // Tight interval, fast cycle — metallic shimmer
+  { name: "Metal Shimmer",     speed: 0.6,   range: 1.0,  directionUp: true,  numVoices: 6,  tilt: 0.7,   feedback: 0.5,  fbDelay: 1.5,   dryWet: 0.7,  grainSize: 0.01 },
+  // 2 voices, heavy feedback, harsh robotic texture
+  { name: "Robot Grind",       speed: 1.2,   range: 1.0,  directionUp: false, numVoices: 2,  tilt: -0.6,  feedback: 0.93, fbDelay: 2.0,   dryWet: 1.0,  grainSize: 0.015 },
+  // Big grain size — chunky, granular texture
+  { name: "Grain Cloud",       speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 10, tilt: -0.3,  feedback: 0.3,  fbDelay: 5.0,   dryWet: 0.9,  grainSize: 0.3  },
+  // Tiny grain size — smooth, nearly continuous pitch shift
+  { name: "Silk Glide",        speed: 0.05,  range: 6.0,  directionUp: false, numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 6.0,   dryWet: 0.8,  grainSize: 0.008 },
+  // Asymmetric tilt — voices pile up at the beginning of the sweep
+  { name: "Slow Start",        speed: 0.06,  range: 5.0,  directionUp: true,  numVoices: 8,  tilt: -0.8,  feedback: 0.4,  fbDelay: 6.0,   dryWet: 0.9,  grainSize: 0.04 },
+  // Opposite tilt — voices cluster at the end, near the write head
+  { name: "Fast Finish",       speed: 0.06,  range: 5.0,  directionUp: true,  numVoices: 8,  tilt: 0.8,   feedback: 0.4,  fbDelay: 6.0,   dryWet: 0.9,  grainSize: 0.04 },
+  // High feedback, long buffer — self-reinforcing drone
+  { name: "Feedback Drone",    speed: 0.03,  range: 2.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 8.0,   dryWet: 1.0,  grainSize: 0.06 },
+  // Full octave range, all voices, pure wet — maximum illusion
+  { name: "Full Spectrum",     speed: 0.04,  range: 10.0, directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 10.0,  dryWet: 1.0,  grainSize: 0.03 },
+  // Mixed dry/wet with moderate settings — subtle effect
+  { name: "Gentle Blend",      speed: 0.12,  range: 2.0,  directionUp: false, numVoices: 6,  tilt: 0.2,   feedback: 0.2,  fbDelay: 3.0,   dryWet: 0.4,  grainSize: 0.06 },
 ];
 
 const ACCENT = "#50b8a0";
@@ -566,7 +571,7 @@ export function ElasticTrainDelay() {
     │   │    │                                  │       │
     │   │    ├─[grain]─[grain]─[grain]─ ··· ─[grain]    │
     │   │    │  slow      ──────────►      fast  │      │
-    │   │    │  (S/H position per grain)         │      │
+    │   │    │  (continuous sweep, grain-windowed)│      │
     │   │    │                                   │      │
     │   │    │◄──── sweep Hann (fade in/out) ───►│      │
     │   │    │  × grain Hann (per-chunk window)  │      │

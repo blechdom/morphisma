@@ -50,7 +50,7 @@ const EXPERIMENTS = [
     href: "/elastic-train-delay",
     title: "Elastic Train Delay",
     description:
-      "Same engine as Candy Coil — feed it a steady tone and the echoes endlessly rise or fall.",
+      "Voices sweep an exponential arc through a deep buffer — starting seconds behind the record head and accelerating toward the present, creating an endless Shepard pitch illusion.",
     tag: "effect",
     background: ELASTIC_BG,
   },
