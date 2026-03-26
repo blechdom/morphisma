@@ -303,6 +303,36 @@ export function ShepardDelay() {
           </button>
         ))}
       </div>
+
+      <pre style={{
+        fontSize: "0.6rem",
+        lineHeight: 1.4,
+        color: "#888",
+        background: "#111",
+        padding: "0.75rem",
+        borderRadius: "6px",
+        overflow: "auto",
+        marginTop: "1.5rem",
+      }}>{`
+  input (mic / file)
+    │
+    ├─── [voice 0: el.delay with per-voice feedback] ──► × envelope ──┐
+    ├─── [voice 1: el.delay with per-voice feedback] ──► × envelope ──┤
+    ├─── ...                                                           ├──► wet
+    └─── [voice N: el.delay with per-voice feedback] ──► × envelope ──┘
+                                                                │
+    Each voice:                                                 ▼
+      input ──► el.delay(delaySamples, feedback) ──► delayed    wet × dryWet
+                    ▲           │                                   │
+                    └───────────┘                                   ▼
+                    per-voice feedback              input × (1 - dryWet)
+                    (echoes pitch-shift                  │
+                     because delay sweeps)               └──►(+)◄──┘
+                                                              │
+      phasor sweeps delay time                                ▼
+      from maxDelay → minDelay (up)                        output
+      envelope crossfades voices
+`}</pre>
     </div>
   );
 }

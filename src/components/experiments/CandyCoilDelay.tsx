@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { el, type NodeRepr_t } from "@elemaudio/core";
 import {
-  rissetTapeDelayGraph,
+  candyCoilDelayGraph,
   MAX_VOICES,
-  type RissetTapeDelayParams,
-} from "@/synth/risset-tape-delay";
+  type CandyCoilDelayParams,
+} from "@/synth/candy-coil-delay";
 import * as engine from "@/audio/delay-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
@@ -23,43 +23,49 @@ interface Preset {
   numVoices: number;
   tilt: number;
   feedback: number;
+  fbDelay: number;
   dryWet: number;
   inputGain: number;
+  outputVol: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Classic Shepard",  speed: 2.0, range: 2.0, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Gentle Rise",      speed: 0.5, range: 0.5, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.3, dryWet: 0.6,  inputGain: 1.0 },
-  { name: "Warm Rise",        speed: 2.0, range: 2.0, directionUp: true,  numVoices: 8,  tilt: -0.6, feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Slow Fall",        speed: 0.3, range: 0.3, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.5, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Deep Spiral",      speed: 1.0, range: 3.0, directionUp: true,  numVoices: 12, tilt: -0.3, feedback: 0.6, dryWet: 0.8,  inputGain: 1.0 },
-  { name: "Fast Shimmer",     speed: 4.0, range: 4.0, directionUp: true,  numVoices: 6,  tilt: 0,    feedback: 0.2, dryWet: 0.5,  inputGain: 1.0 },
-  { name: "Frozen",           speed: 0.1, range: 0.1, directionUp: true,  numVoices: 12, tilt: 0,    feedback: 0.9, dryWet: 0.9,  inputGain: 0.8 },
-  { name: "Descent",          speed: 2.0, range: 2.0, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Wide & Slow",      speed: 0.2, range: 6.0, directionUp: true,  numVoices: 10, tilt: 0,    feedback: 0.7, dryWet: 0.85, inputGain: 1.0 },
+  { name: "Dry Coil",       speed: 1.0,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 0.25,  dryWet: 0.6,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Short Echo",     speed: 0.5,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: -0.4,  feedback: 0.5,  fbDelay: 0.15,  dryWet: 0.7,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Long Repeat",    speed: 0.8,   range: 1.5,   directionUp: false, numVoices: 10, tilt: 0.3,   feedback: 0.6,  fbDelay: 1.0,   dryWet: 0.7,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Tape Sustain",   speed: 2.0,   range: 0.5,   directionUp: true,  numVoices: 6,  tilt: 0.5,   feedback: 0.8,  fbDelay: 0.5,   dryWet: 0.5,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Dense Spiral",   speed: 0.77,  range: 2.032, directionUp: true,  numVoices: 12, tilt: 0.28,  feedback: 0.95, fbDelay: 4.487, dryWet: 1.0,  inputGain: 1.0, outputVol: 0.71 },
+  { name: "Tight Comb",     speed: 1.5,   range: 0.8,   directionUp: true,  numVoices: 4,  tilt: 0,     feedback: 0.7,  fbDelay: 0.08,  dryWet: 0.6,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Slow Wash",      speed: 0.2,   range: 3.0,   directionUp: true,  numVoices: 12, tilt: -0.3,  feedback: 0.8,  fbDelay: 2.5,   dryWet: 0.85, inputGain: 1.0, outputVol: 0.6 },
+  { name: "Falling Deep",   speed: 0.6,   range: 2.5,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 1.5,   dryWet: 0.8,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Fast & Dirty",   speed: 3.0,   range: 1.0,   directionUp: true,  numVoices: 4,  tilt: 0.6,   feedback: 0.6,  fbDelay: 0.25,  dryWet: 0.7,  inputGain: 1.0, outputVol: 0.4 },
+  { name: "Frozen Lake",    speed: 0.1,   range: 4.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.9,  fbDelay: 3.0,   dryWet: 0.95, inputGain: 0.8, outputVol: 0.6 },
+  { name: "Still Resonance", speed: 0.0, range: 0.101, directionUp: true,  numVoices: 6,  tilt: -0.67, feedback: 0.95, fbDelay: 0.001, dryWet: 1.0,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Dual Grind",     speed: 1.309, range: 0.104, directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.006, dryWet: 1.0,  inputGain: 1.0, outputVol: 0.5 },
 ];
 
 function deriveParams(
   speed: number,
   range: number,
   directionUp: boolean,
-  rest: Omit<RissetTapeDelayParams, "speed" | "range" | "directionUp">
-): RissetTapeDelayParams {
+  rest: Omit<CandyCoilDelayParams, "speed" | "range" | "directionUp">
+): CandyCoilDelayParams {
   return { ...rest, speed, range, directionUp };
 }
 
-export function RissetTapeDelay() {
+export function CandyCoilDelay() {
   const [playing, setPlaying] = useState(false);
   const [outputVol, setOutputVol] = useState(0.5);
   const [source, setSource] = useState<Source>("file");
   const [fileUrl, setFileUrl] = useState("");
 
-  const [speed, setSpeed] = useState(2.0);
-  const [range, setRange] = useState(2.0);
+  const [speed, setSpeed] = useState(1.0);
+  const [range, setRange] = useState(1.0);
   const [dirUp, setDirUp] = useState(true);
   const [numVoices, setNumVoices] = useState(8);
   const [tilt, setTilt] = useState(0);
-  const [feedback, setFeedback] = useState(0.4);
+  const [feedback, setFeedback] = useState(0.0);
+  const [fbDelay, setFbDelay] = useState(0.25);
   const [dryWet, setDryWet] = useState(0.7);
   const [inputGain, setInputGain] = useState(1.0);
 
@@ -84,6 +90,7 @@ export function RissetTapeDelay() {
     numVoices,
     tilt,
     feedback,
+    fbDelay,
     dryWet,
     inputGain,
   });
@@ -101,7 +108,7 @@ export function RissetTapeDelay() {
   const buildAndRender = useCallback(() => {
     if (!playing) return;
     const sr = engine.getSampleRate();
-    const graph = rissetTapeDelayGraph(params, sr);
+    const graph = candyCoilDelayGraph(params, sr);
     const gained = el.mul(
       graph,
       el.sm(el.const({ key: "output-vol", value: outputVol }))
@@ -216,8 +223,10 @@ export function RissetTapeDelay() {
     setNumVoices(p.numVoices);
     setTilt(p.tilt);
     setFeedback(p.feedback);
+    setFbDelay(p.fbDelay);
     setDryWet(p.dryWet);
     setInputGain(p.inputGain);
+    setOutputVol(p.outputVol);
   };
 
   const startSaving = () => {
@@ -231,7 +240,7 @@ export function RissetTapeDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, dryWet, inputGain },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet, inputGain, outputVol },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -245,8 +254,8 @@ export function RissetTapeDelay() {
 
   return (
     <div>
-      <h1 className="site-title" style={{ color: "#7060c0" }}>
-        Risset Tape Delay
+      <h1 className="site-title" style={{ color: "#e05090" }}>
+        Candy Coil Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
         {numVoices} play heads sweep an exponential curve through the tape
@@ -291,7 +300,7 @@ export function RissetTapeDelay() {
           {playing ? "⏸ Pause" : "▶ Play"}
         </button>
         <div className="scope-wrap">
-          <Oscilloscope data={scopeData} color="#7060c0" width={300} height={100} />
+          <Oscilloscope data={scopeData} color="#e05090" width={300} height={100} />
         </div>
       </div>
 
@@ -385,7 +394,7 @@ export function RissetTapeDelay() {
         <Slider
           label="Voices"
           value={numVoices}
-          min={2}
+          min={1}
           max={MAX_VOICES}
           step={1}
           onChange={setNumVoices}
@@ -415,7 +424,7 @@ export function RissetTapeDelay() {
               type="checkbox"
               checked={dirUp}
               onChange={(e) => setDirUp(e.target.checked)}
-              style={{ accentColor: "#7060c0" }}
+              style={{ accentColor: "#e05090" }}
             />
             {dirUp ? "Up" : "Down"}
           </label>
@@ -424,7 +433,7 @@ export function RissetTapeDelay() {
               type="checkbox"
               checked={lockRatio}
               onChange={(e) => setLockRatio(e.target.checked)}
-              style={{ accentColor: "#7060c0" }}
+              style={{ accentColor: "#e05090" }}
             />
             Lock range = 1/speed
           </label>
@@ -441,7 +450,7 @@ export function RissetTapeDelay() {
               max={RANGE_MAX}
               step={0.001}
               unit="s"
-              curve={2}
+              curve={3}
               onChange={handleRange}
             />
           </div>
@@ -484,6 +493,16 @@ export function RissetTapeDelay() {
           onChange={setFeedback}
         />
         <Slider
+          label="FB Delay"
+          value={fbDelay}
+          min={0.001}
+          max={5}
+          step={0.001}
+          unit="s"
+          curve={2}
+          onChange={setFbDelay}
+        />
+        <Slider
           label="Dry / Wet"
           value={dryWet}
           min={0}
@@ -506,27 +525,26 @@ export function RissetTapeDelay() {
   input (mic / file)
     │
     ▼
-   (+)◄──────────── mixed voice output × feedback (global loop via tapIn/tapOut)
+   (+)◄──────────── fb read output × feedback
     │                        ▲
     ▼                        │
-  [write to buffer]          │
-    │                        │
-    ├─ [voice 0: read sweeping exp curve, Hann window] ──┐
-    ├─ [voice 1: read sweeping exp curve, Hann window] ──┤
-    ├─ ...                                                ├──► mixed voices
-    └─ [voice N: read sweeping exp curve, Hann window] ──┘        │
-                                                                   │
-       each voice sweeps read position                        tapOut ──► feeds back
-       through range at speed Hz,                                  │
-       phase-offset and Hann-windowed                       wet × dryWet
-                                                                   │
-    input × (1 - dryWet) ──────────────────────────────►(+)◄───────┘
-                                                         │
-                                                         ▼
-                                                      output
-
-  Global feedback: the mixed (pitch-shifted) voice output feeds back
-  into the buffer, so each pass through the delay shifts pitch again.
+  [write to buffer] ··· [fb read at fbDelay behind write]
+    │                   (not sent to output)
+    │
+    ├─── [shepard read 0, sweeping position, Hann window] ──┐
+    ├─── [shepard read 1, sweeping position, Hann window] ──┤
+    ├─── ...                                                ├──► wet signal
+    └─── [shepard read N, sweeping position, Hann window] ──┘
+                                                    │
+                                                    ▼
+                                          wet × dryWet
+                                                    │
+    input × (1 - dryWet)                            │
+         │                                          │
+         └──────────────►(+)◄───────────────────────┘
+                          │
+                          ▼
+                       output
 `}</pre>
     </div>
   );

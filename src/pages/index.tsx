@@ -24,6 +24,13 @@ const EXPERIMENTS = [
     tag: "effect",
   },
   {
+    href: "/simple-tape-delay",
+    title: "Simple Tape Delay",
+    description:
+      "One circular buffer, one read head, one feedback path — the fundamental building block of all the other delay experiments.",
+    tag: "effect",
+  },
+  {
     href: "/tape-delay",
     title: "Tape Delay",
     description:
@@ -35,6 +42,20 @@ const EXPERIMENTS = [
     title: "Risset Tape Delay",
     description:
       "Single play head on a circular buffer — the foundation for building Risset-style delay effects with pitch-shifting tape manipulation.",
+    tag: "effect",
+  },
+  {
+    href: "/candy-coil-delay",
+    title: "Candy Coil Delay",
+    description:
+      "A variation on the Risset Tape Delay — same spiraling architecture, new flavor.",
+    tag: "effect",
+  },
+  {
+    href: "/risset-coil-delay",
+    title: "Risset Coil Delay",
+    description:
+      "Tuned for the classic Shepard-Risset illusion — feed it a steady tone and the echoes endlessly rise or fall.",
     tag: "effect",
   },
 ];

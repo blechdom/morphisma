@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { el, type NodeRepr_t } from "@elemaudio/core";
 import {
-  rissetTapeDelayGraph,
+  rissetCoilDelayGraph,
   MAX_VOICES,
-  type RissetTapeDelayParams,
-} from "@/synth/risset-tape-delay";
+  type RissetCoilDelayParams,
+} from "@/synth/risset-coil-delay";
 import * as engine from "@/audio/delay-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
 
 type Source = "mic" | "file";
 
-const SPEED_LIMIT = 5;
+const SPEED_LIMIT = 1;
 const RANGE_MIN = 0.1;
 const RANGE_MAX = 10;
 
@@ -23,48 +23,48 @@ interface Preset {
   numVoices: number;
   tilt: number;
   feedback: number;
+  fbDelay: number;
   dryWet: number;
   inputGain: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Classic Shepard",  speed: 2.0, range: 2.0, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Gentle Rise",      speed: 0.5, range: 0.5, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.3, dryWet: 0.6,  inputGain: 1.0 },
-  { name: "Warm Rise",        speed: 2.0, range: 2.0, directionUp: true,  numVoices: 8,  tilt: -0.6, feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Slow Fall",        speed: 0.3, range: 0.3, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.5, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Deep Spiral",      speed: 1.0, range: 3.0, directionUp: true,  numVoices: 12, tilt: -0.3, feedback: 0.6, dryWet: 0.8,  inputGain: 1.0 },
-  { name: "Fast Shimmer",     speed: 4.0, range: 4.0, directionUp: true,  numVoices: 6,  tilt: 0,    feedback: 0.2, dryWet: 0.5,  inputGain: 1.0 },
-  { name: "Frozen",           speed: 0.1, range: 0.1, directionUp: true,  numVoices: 12, tilt: 0,    feedback: 0.9, dryWet: 0.9,  inputGain: 0.8 },
-  { name: "Descent",          speed: 2.0, range: 2.0, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.4, dryWet: 0.7,  inputGain: 1.0 },
-  { name: "Wide & Slow",      speed: 0.2, range: 6.0, directionUp: true,  numVoices: 10, tilt: 0,    feedback: 0.7, dryWet: 0.85, inputGain: 1.0 },
+  { name: "Risset Up",      speed: 0.05, range: 2.0, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.0,  fbDelay: 0.25, dryWet: 0.8,  inputGain: 1.0 },
+  { name: "Risset Down",    speed: 0.05, range: 2.0, directionUp: false, numVoices: 8,  tilt: 0,    feedback: 0.0,  fbDelay: 0.25, dryWet: 0.8,  inputGain: 1.0 },
+  { name: "Deep Rise",      speed: 0.03, range: 3.0, directionUp: true,  numVoices: 12, tilt: 0,    feedback: 0.0,  fbDelay: 0.25, dryWet: 0.8,  inputGain: 1.0 },
+  { name: "Echo Rise",      speed: 0.04, range: 2.0, directionUp: true,  numVoices: 8,  tilt: -0.3, feedback: 0.6,  fbDelay: 0.5,  dryWet: 0.7,  inputGain: 1.0 },
+  { name: "Dub Fall",       speed: 0.05, range: 2.5, directionUp: false, numVoices: 8,  tilt: -0.5, feedback: 0.7,  fbDelay: 0.38, dryWet: 0.7,  inputGain: 1.0 },
+  { name: "Frozen",         speed: 0.02, range: 3.0, directionUp: true,  numVoices: 12, tilt: 0,    feedback: 0.85, fbDelay: 2.0,  dryWet: 0.9,  inputGain: 0.8 },
+  { name: "Glacial Fall",   speed: 0.01, range: 5.0, directionUp: false, numVoices: 12, tilt: 0.3,  feedback: 0.7,  fbDelay: 3.0,  dryWet: 0.85, inputGain: 1.0 },
+  { name: "Faster Spiral",  speed: 0.15, range: 3.0, directionUp: true,  numVoices: 8,  tilt: 0,    feedback: 0.4,  fbDelay: 0.75, dryWet: 0.7,  inputGain: 1.0 },
 ];
 
 function deriveParams(
   speed: number,
   range: number,
   directionUp: boolean,
-  rest: Omit<RissetTapeDelayParams, "speed" | "range" | "directionUp">
-): RissetTapeDelayParams {
+  rest: Omit<RissetCoilDelayParams, "speed" | "range" | "directionUp">
+): RissetCoilDelayParams {
   return { ...rest, speed, range, directionUp };
 }
 
-export function RissetTapeDelay() {
+export function RissetCoilDelay() {
   const [playing, setPlaying] = useState(false);
   const [outputVol, setOutputVol] = useState(0.5);
   const [source, setSource] = useState<Source>("file");
   const [fileUrl, setFileUrl] = useState("");
 
-  const [speed, setSpeed] = useState(2.0);
+  const [speed, setSpeed] = useState(0.05);
   const [range, setRange] = useState(2.0);
   const [dirUp, setDirUp] = useState(true);
   const [numVoices, setNumVoices] = useState(8);
   const [tilt, setTilt] = useState(0);
-  const [feedback, setFeedback] = useState(0.4);
-  const [dryWet, setDryWet] = useState(0.7);
+  const [feedback, setFeedback] = useState(0.0);
+  const [fbDelay, setFbDelay] = useState(0.25);
+  const [dryWet, setDryWet] = useState(0.8);
   const [inputGain, setInputGain] = useState(1.0);
 
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
-  const [lockRatio, setLockRatio] = useState(false);
   const [customPresets, setCustomPresets] = useState<Preset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -76,14 +76,11 @@ export function RissetTapeDelay() {
   const sourceConnectedRef = useRef(false);
   playingRef.current = playing;
 
-  const pitchProduct = speed * range;
-  const pitchRatio = dirUp ? 1 + pitchProduct : Math.max(1 - pitchProduct, 0.01);
-  const semitones = Math.round(12 * Math.log2(Math.max(pitchRatio, 0.01)));
-
   const params = deriveParams(speed, range, dirUp, {
     numVoices,
     tilt,
     feedback,
+    fbDelay,
     dryWet,
     inputGain,
   });
@@ -101,7 +98,7 @@ export function RissetTapeDelay() {
   const buildAndRender = useCallback(() => {
     if (!playing) return;
     const sr = engine.getSampleRate();
-    const graph = rissetTapeDelayGraph(params, sr);
+    const graph = rissetCoilDelayGraph(params, sr);
     const gained = el.mul(
       graph,
       el.sm(el.const({ key: "output-vol", value: outputVol }))
@@ -176,19 +173,7 @@ export function RissetTapeDelay() {
     }
   }, [fileUrl]);
 
-  const handleSpeed = (newSpeed: number) => {
-    if (lockRatio && newSpeed > 0) {
-      const r = Math.min(RANGE_MAX, Math.max(RANGE_MIN, 1 / newSpeed));
-      setRange(Math.round(r * 1000) / 1000);
-    }
-    setSpeed(newSpeed);
-  };
-
   const handleRange = (newRange: number) => {
-    if (lockRatio && newRange > 0) {
-      const s = Math.min(SPEED_LIMIT, 1 / newRange);
-      setSpeed(Math.round(s * 1000) / 1000);
-    }
     setRange(newRange);
   };
 
@@ -216,6 +201,7 @@ export function RissetTapeDelay() {
     setNumVoices(p.numVoices);
     setTilt(p.tilt);
     setFeedback(p.feedback);
+    setFbDelay(p.fbDelay);
     setDryWet(p.dryWet);
     setInputGain(p.inputGain);
   };
@@ -231,7 +217,7 @@ export function RissetTapeDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, dryWet, inputGain },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet, inputGain },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -245,13 +231,13 @@ export function RissetTapeDelay() {
 
   return (
     <div>
-      <h1 className="site-title" style={{ color: "#7060c0" }}>
-        Risset Tape Delay
+      <h1 className="site-title" style={{ color: "#50b8a0" }}>
+        Risset Coil Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
-        {numVoices} play heads sweep an exponential curve through the tape
-        buffer, each Hann-windowed and equidistant in phase — creating an
-        endlessly {dirUp ? "rising" : "falling"} Shepard pitch spiral.
+        Same engine as Candy Coil but tuned for the classic Shepard-Risset
+        illusion — feed it a steady tone and the echoes sound like they
+        endlessly {dirUp ? "rise" : "fall"}.
       </p>
 
       <div className="source-bar">
@@ -291,7 +277,7 @@ export function RissetTapeDelay() {
           {playing ? "⏸ Pause" : "▶ Play"}
         </button>
         <div className="scope-wrap">
-          <Oscilloscope data={scopeData} color="#7060c0" width={300} height={100} />
+          <Oscilloscope data={scopeData} color="#50b8a0" width={300} height={100} />
         </div>
       </div>
 
@@ -385,7 +371,7 @@ export function RissetTapeDelay() {
         <Slider
           label="Voices"
           value={numVoices}
-          min={2}
+          min={1}
           max={MAX_VOICES}
           step={1}
           onChange={setNumVoices}
@@ -393,12 +379,12 @@ export function RissetTapeDelay() {
         <Slider
           label="Speed"
           value={speed}
-          min={0}
+          min={0.005}
           max={SPEED_LIMIT}
           step={0.001}
           unit="Hz"
           curve={2}
-          onChange={handleSpeed}
+          onChange={setSpeed}
         />
         <div
           style={{
@@ -415,22 +401,10 @@ export function RissetTapeDelay() {
               type="checkbox"
               checked={dirUp}
               onChange={(e) => setDirUp(e.target.checked)}
-              style={{ accentColor: "#7060c0" }}
+              style={{ accentColor: "#50b8a0" }}
             />
             {dirUp ? "Up" : "Down"}
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", userSelect: "none" }}>
-            <input
-              type="checkbox"
-              checked={lockRatio}
-              onChange={(e) => setLockRatio(e.target.checked)}
-              style={{ accentColor: "#7060c0" }}
-            />
-            Lock range = 1/speed
-          </label>
-          <span style={{ marginLeft: "auto", color: "#999", fontVariantNumeric: "tabular-nums" }}>
-            {pitchRatio.toFixed(2)}x / {semitones > 0 ? "+" : ""}{semitones} st
-          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <div style={{ flex: 1 }}>
@@ -441,7 +415,7 @@ export function RissetTapeDelay() {
               max={RANGE_MAX}
               step={0.001}
               unit="s"
-              curve={2}
+              curve={3}
               onChange={handleRange}
             />
           </div>
@@ -484,6 +458,16 @@ export function RissetTapeDelay() {
           onChange={setFeedback}
         />
         <Slider
+          label="FB Delay"
+          value={fbDelay}
+          min={0.001}
+          max={5}
+          step={0.001}
+          unit="s"
+          curve={2}
+          onChange={setFbDelay}
+        />
+        <Slider
           label="Dry / Wet"
           value={dryWet}
           min={0}
@@ -506,27 +490,26 @@ export function RissetTapeDelay() {
   input (mic / file)
     │
     ▼
-   (+)◄──────────── mixed voice output × feedback (global loop via tapIn/tapOut)
+   (+)◄──────────── fb read output × feedback
     │                        ▲
     ▼                        │
-  [write to buffer]          │
-    │                        │
-    ├─ [voice 0: read sweeping exp curve, Hann window] ──┐
-    ├─ [voice 1: read sweeping exp curve, Hann window] ──┤
-    ├─ ...                                                ├──► mixed voices
-    └─ [voice N: read sweeping exp curve, Hann window] ──┘        │
-                                                                   │
-       each voice sweeps read position                        tapOut ──► feeds back
-       through range at speed Hz,                                  │
-       phase-offset and Hann-windowed                       wet × dryWet
-                                                                   │
-    input × (1 - dryWet) ──────────────────────────────►(+)◄───────┘
-                                                         │
-                                                         ▼
-                                                      output
-
-  Global feedback: the mixed (pitch-shifted) voice output feeds back
-  into the buffer, so each pass through the delay shifts pitch again.
+  [write to buffer] ··· [fb read at fbDelay behind write]
+    │                   (not sent to output)
+    │
+    ├─── [shepard read 0, sweeping position, Hann window] ──┐
+    ├─── [shepard read 1, sweeping position, Hann window] ──┤
+    ├─── ...                                                ├──► wet signal
+    └─── [shepard read N, sweeping position, Hann window] ──┘
+                                                    │
+                                                    ▼
+                                          wet × dryWet
+                                                    │
+    input × (1 - dryWet)                            │
+         │                                          │
+         └──────────────►(+)◄───────────────────────┘
+                          │
+                          ▼
+                       output
 `}</pre>
     </div>
   );

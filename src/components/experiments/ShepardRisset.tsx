@@ -165,6 +165,33 @@ export function ShepardRisset() {
           </button>
         ))}
       </div>
+
+      <pre style={{
+        fontSize: "0.6rem",
+        lineHeight: 1.4,
+        color: "#888",
+        background: "#111",
+        padding: "0.75rem",
+        borderRadius: "6px",
+        overflow: "auto",
+        marginTop: "1.5rem",
+      }}>{`
+  [voice 0: phasor + phase offset] ──► freq sweep ──► sine osc ──► × envelope ──┐
+  [voice 1: phasor + phase offset] ──► freq sweep ──► sine osc ──► × envelope ──┤
+  ...                                                                            ├──► sum ──► output
+  [voice N: phasor + phase offset] ──► freq sweep ──► sine osc ──► × envelope ──┘
+
+  Each voice:
+    phasor (0→1 at speed Hz) + phase offset ──► quadratic freq curve
+                                                    │
+    startFreq + curve × freqRange ──► el.cycle (sine oscillator)
+                                                    │
+    bell-curve envelope (same phasor) ──► × ──► voiced output
+
+  No input. No delay. No feedback.
+  Pure synthesis: N crossfading sine oscillators sweep
+  through a frequency range, creating the Shepard tone illusion.
+`}</pre>
     </div>
   );
 }

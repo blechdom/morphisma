@@ -305,6 +305,43 @@ export function ShepardDelayGlobalFeedback() {
           </button>
         ))}
       </div>
+
+      <pre style={{
+        fontSize: "0.6rem",
+        lineHeight: 1.4,
+        color: "#888",
+        background: "#111",
+        padding: "0.75rem",
+        borderRadius: "6px",
+        overflow: "auto",
+        marginTop: "1.5rem",
+      }}>{`
+  input (mic / file)
+    │
+    ▼
+   (+)◄──────────── raw voice sum × feedback (global loop via tapIn/tapOut)
+    │                        ▲
+    ▼                        │
+  combinedInput              │
+    │                        │
+    ├─ [voice 0: el.delay, sweeping, no per-voice fb] ─┬─► × envelope ──┐
+    ├─ [voice 1: el.delay, sweeping, no per-voice fb] ─┤  × envelope ──┤
+    ├─ ...                                              │   ...          ├──► wet (heard)
+    └─ [voice N: el.delay, sweeping, no per-voice fb] ─┤  × envelope ──┘
+                                                        │
+                                                        ▼
+                                                   raw sum (no envelope)
+                                                        │
+                                                   tapOut ──► feeds back
+                                                   (not heard directly)
+
+  wet × dryWet ──────────────────────┐
+                                     ▼
+  input × (1 - dryWet) ──────────►(+)──► output
+
+  Global feedback: the UN-enveloped voice sum feeds back into
+  the input, so pitch-shifted echoes accumulate on each pass.
+`}</pre>
     </div>
   );
 }

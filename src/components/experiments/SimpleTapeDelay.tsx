@@ -1,51 +1,57 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { el, type NodeRepr_t } from "@elemaudio/core";
 import {
-  tapeDelayGraph,
-  MAX_HEADS,
-  PRESETS,
-  DEFAULT_DELAY_TIMES,
-  DEFAULT_HEAD_LEVELS,
-  type TapeDelayParams,
-} from "@/synth/tape-delay";
+  simpleTapeDelayGraph,
+  type SimpleTapeDelayParams,
+} from "@/synth/simple-tape-delay";
 import * as engine from "@/audio/delay-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
 
 type Source = "mic" | "file";
 
-const HEAD_COLORS = [
-  "#e0a030",
-  "#30b0e0",
-  "#e05050",
-  "#50c070",
-  "#b060d0",
-  "#20c8c8",
-  "#e07090",
-  "#d09030",
+interface Preset {
+  name: string;
+  delayTime: number;
+  feedback: number;
+  dryWet: number;
+  inputGain: number;
+}
+
+const PRESETS: Preset[] = [
+  { name: "Slapback",    delayTime: 0.08,  feedback: 0.0,  dryWet: 0.5,  inputGain: 1.0 },
+  { name: "Short Echo",  delayTime: 0.25,  feedback: 0.4,  dryWet: 0.5,  inputGain: 1.0 },
+  { name: "Quarter Note", delayTime: 0.5,  feedback: 0.5,  dryWet: 0.5,  inputGain: 1.0 },
+  { name: "Long Repeat", delayTime: 1.0,   feedback: 0.6,  dryWet: 0.6,  inputGain: 1.0 },
+  { name: "Infinite",    delayTime: 0.5,   feedback: 0.93, dryWet: 0.7,  inputGain: 0.8 },
 ];
 
-const DEFAULT_PARAMS: TapeDelayParams = {
-  numHeads: 1,
-  delayTimes: [...DEFAULT_DELAY_TIMES],
-  headLevels: [...DEFAULT_HEAD_LEVELS],
-  feedback: 0.4,
-  dryWet: 0.5,
-  inputGain: 1.0,
-};
-
-export function TapeDelay() {
+export function SimpleTapeDelay() {
   const [playing, setPlaying] = useState(false);
   const [outputVol, setOutputVol] = useState(0.5);
   const [source, setSource] = useState<Source>("file");
   const [fileUrl, setFileUrl] = useState("");
-  const [params, setParams] = useState<TapeDelayParams>(DEFAULT_PARAMS);
+
+  const [delayTime, setDelayTime] = useState(0.25);
+  const [feedback, setFeedback] = useState(0.4);
+  const [dryWet, setDryWet] = useState(0.5);
+  const [inputGain, setInputGain] = useState(1.0);
+
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const playingRef = useRef(playing);
   const sourceConnectedRef = useRef(false);
   playingRef.current = playing;
+
+  const tapTimesRef = useRef<number[]>([]);
+
+  const params: SimpleTapeDelayParams = {
+    delayTime,
+    feedback,
+    dryWet,
+    inputGain,
+  };
 
   useEffect(() => {
     engine.onScope((data) => {
@@ -60,7 +66,7 @@ export function TapeDelay() {
   const buildAndRender = useCallback(() => {
     if (!playing) return;
     const sr = engine.getSampleRate();
-    const graph = tapeDelayGraph(params, sr);
+    const graph = simpleTapeDelayGraph(params, sr);
     const gained = el.mul(
       graph,
       el.sm(el.const({ key: "output-vol", value: outputVol }))
@@ -135,42 +141,68 @@ export function TapeDelay() {
     }
   }, [fileUrl]);
 
-  const set = <K extends keyof TapeDelayParams>(
-    key: K,
-    value: TapeDelayParams[K]
-  ) => {
-    setParams((prev) => ({ ...prev, [key]: value }));
+  const applyPreset = (p: Preset) => {
+    setDelayTime(p.delayTime);
+    setFeedback(p.feedback);
+    setDryWet(p.dryWet);
+    setInputGain(p.inputGain);
   };
 
-  const setHeadDelay = (index: number, value: number) => {
-    setParams((prev) => {
-      const arr = [...prev.delayTimes];
-      arr[index] = value;
-      return { ...prev, delayTimes: arr };
-    });
-  };
-
-  const setHeadLevel = (index: number, value: number) => {
-    setParams((prev) => {
-      const arr = [...prev.headLevels];
-      arr[index] = value;
-      return { ...prev, headLevels: arr };
-    });
-  };
-
-  const applyPreset = (index: number) => {
-    setParams({ ...PRESETS[index].params });
+  const TAP_TIMEOUT = 3000;
+  const handleTap = () => {
+    const now = performance.now();
+    const taps = tapTimesRef.current;
+    if (taps.length > 0 && now - taps[taps.length - 1] > TAP_TIMEOUT) {
+      taps.length = 0;
+    }
+    taps.push(now);
+    if (taps.length > 5) taps.shift();
+    if (taps.length < 2) return;
+    const intervals: number[] = [];
+    for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
+    const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    setDelayTime(Math.min(10, Math.max(0.001, avgMs / 1000)));
   };
 
   return (
     <div>
-      <h1 className="site-title" style={{ color: "#e0a030" }}>
-        Tape Delay
+      <h1 className="site-title" style={{ color: "#40a8e0" }}>
+        Simple Tape Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
-        Circular buffer with a record head and up to {MAX_HEADS} movable play
-        heads. Drag each head's <em>Delay Time</em> to sweep it across the tape.
+        One circular buffer, one read head, one feedback path — the
+        fundamental building block of all the other delay experiments.
       </p>
+
+      <pre style={{
+        fontSize: "0.6rem",
+        lineHeight: 1.4,
+        color: "#888",
+        background: "#111",
+        padding: "0.75rem",
+        borderRadius: "6px",
+        overflow: "auto",
+        marginBottom: "1.5rem",
+      }}>{`
+  input (mic / file)
+    │
+    ▼
+   (+)◄──── read output × feedback
+    │                ▲
+    ▼                │
+  [write to buffer] ··· [read from buffer at delayTime]
+    │                           │
+    │                           ▼
+    │                     wet signal × dryWet
+    │                           │
+    ▼                           ▼
+  input × (1 - dryWet)       (+)
+    │                           │
+    └───────────►(+)◄───────────┘
+                  │
+                  ▼
+               output
+`}</pre>
 
       <div className="source-bar">
         <span className="source-label">Source</span>
@@ -209,12 +241,7 @@ export function TapeDelay() {
           {playing ? "⏸ Pause" : "▶ Play"}
         </button>
         <div className="scope-wrap">
-          <Oscilloscope
-            data={scopeData}
-            color="#e0a030"
-            width={300}
-            height={100}
-          />
+          <Oscilloscope data={scopeData} color="#40a8e0" width={300} height={100} />
         </div>
       </div>
 
@@ -224,7 +251,7 @@ export function TapeDelay() {
           <button
             key={i}
             className="preset-btn"
-            onClick={() => applyPreset(i)}
+            onClick={() => applyPreset(p)}
             title={p.name}
           >
             {p.name}
@@ -235,11 +262,11 @@ export function TapeDelay() {
       <div className="controls">
         <Slider
           label="Input Gain"
-          value={params.inputGain}
+          value={inputGain}
           min={0}
           max={2}
           step={0.01}
-          onChange={(v) => set("inputGain", v)}
+          onChange={setInputGain}
         />
         <Slider
           label="Output Vol"
@@ -247,101 +274,58 @@ export function TapeDelay() {
           min={0}
           max={1}
           step={0.01}
-          onChange={(v) => setOutputVol(v)}
+          onChange={setOutputVol}
         />
-        <Slider
-          label="Dry / Wet"
-          value={params.dryWet}
-          min={0}
-          max={1}
-          step={0.01}
-          onChange={(v) => set("dryWet", v)}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{ flex: 1 }}>
+            <Slider
+              label="Delay Time"
+              value={delayTime}
+              min={0.001}
+              max={10}
+              step={0.001}
+              unit="s"
+              curve={2}
+              onChange={setDelayTime}
+            />
+          </div>
+          <button
+            onClick={handleTap}
+            style={{
+              padding: "0.35rem 0.6rem",
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              border: "1px solid #555",
+              borderRadius: "4px",
+              background: "#1e1e2e",
+              color: "#bbb",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+            title="Tap repeatedly to set delay from tempo"
+          >
+            Tap
+          </button>
+        </div>
         <Slider
           label="Feedback"
-          value={params.feedback}
+          value={feedback}
           min={0}
           max={0.95}
           step={0.01}
-          onChange={(v) => set("feedback", v)}
+          onChange={setFeedback}
         />
         <Slider
-          label="Play Heads"
-          value={params.numHeads}
-          min={1}
-          max={MAX_HEADS}
-          step={1}
-          onChange={(v) => set("numHeads", v)}
+          label="Dry / Wet"
+          value={dryWet}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={setDryWet}
         />
       </div>
-
-      <div className="heads-grid">
-        {Array.from({ length: params.numHeads }, (_, i) => (
-          <div
-            key={i}
-            className="head-card"
-            style={{ borderColor: HEAD_COLORS[i] }}
-          >
-            <span className="head-label" style={{ color: HEAD_COLORS[i] }}>
-              Head {i + 1}
-            </span>
-            <Slider
-              label="Time"
-              value={Math.round((params.delayTimes[i] ?? DEFAULT_DELAY_TIMES[i]) * 1000)}
-              min={10}
-              max={10000}
-              step={1}
-              unit="ms"
-              onChange={(v) => setHeadDelay(i, v / 1000)}
-            />
-            <Slider
-              label="Level"
-              value={params.headLevels[i] ?? DEFAULT_HEAD_LEVELS[i]}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={(v) => setHeadLevel(i, v)}
-            />
-          </div>
-        ))}
-      </div>
-
-      <pre style={{
-        fontSize: "0.6rem",
-        lineHeight: 1.4,
-        color: "#888",
-        background: "#111",
-        padding: "0.75rem",
-        borderRadius: "6px",
-        overflow: "auto",
-        marginTop: "1.5rem",
-      }}>{`
-  input (mic / file)
-    │
-    ▼
-   (+)◄──────────── mixed head output × feedback (global loop via tapIn/tapOut)
-    │                        ▲
-    ▼                        │
-  [write to buffer]          │
-    │                        │
-    ├─── [head 0: read at delayTime₀] ──► × level₀ ──┐
-    ├─── [head 1: read at delayTime₁] ──► × level₁ ──┤
-    ├─── ...                                           ├──► mixed heads
-    └─── [head N: read at delayTimeₙ] ──► × levelₙ ──┘        │
-                                                               │
-                                                          tapOut ──► feeds back
-                                                               │
-                                                        wet × dryWet
-                                                               │
-    input × (1 - dryWet) ──────────────────────────►(+)◄───────┘
-                                                     │
-                                                     ▼
-                                                  output
-
-  Each head reads at a fixed delay time (adjustable).
-  The mixed output of all heads feeds back globally.
-  Moving a head's delay time produces tape-style pitch artifacts.
-`}</pre>
     </div>
   );
 }
