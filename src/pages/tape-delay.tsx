@@ -12,7 +12,7 @@ export default function TapeDelayPage() {
   return (
     <>
       <Head>
-        <title>Tape Delay — MORPHISMA</title>
+        <title>Multi-Head Tape Delay — MORPHISMA</title>
       </Head>
       <div className="page-narrow">
         <Link href="/" className="back-link">

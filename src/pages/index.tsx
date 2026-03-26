@@ -10,13 +10,6 @@ const EXPERIMENTS = [
     tag: "synthesis",
   },
   {
-    href: "/shepard-delay",
-    title: "Shepard Delay",
-    description:
-      "Delay effect inspired by the Shepard-Risset glissando — echoes accelerate and pitch-shift with feedback, creating an infinite spiral.",
-    tag: "effect",
-  },
-  {
     href: "/shepard-delay-global-feedback",
     title: "Shepard Delay — Global Feedback",
     description:
@@ -32,16 +25,9 @@ const EXPERIMENTS = [
   },
   {
     href: "/tape-delay",
-    title: "Tape Delay",
+    title: "Multi-Head Tape Delay",
     description:
       "Circular buffer modelled as infinite tape — a record head writes continuously while a movable play head reads back at a variable delay, with feedback.",
-    tag: "effect",
-  },
-  {
-    href: "/risset-tape-delay",
-    title: "Risset Tape Delay",
-    description:
-      "Single play head on a circular buffer — the foundation for building Risset-style delay effects with pitch-shifting tape manipulation.",
     tag: "effect",
   },
   {

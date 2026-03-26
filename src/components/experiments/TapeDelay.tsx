@@ -165,7 +165,7 @@ export function TapeDelay() {
   return (
     <div>
       <h1 className="site-title" style={{ color: "#e0a030" }}>
-        Tape Delay
+        Multi-Head Tape Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
         Circular buffer with a record head and up to {MAX_HEADS} movable play

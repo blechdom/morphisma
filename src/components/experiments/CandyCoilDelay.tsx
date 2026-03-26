@@ -11,6 +11,41 @@ import { Slider } from "@/components/Slider";
 
 type Source = "mic" | "file";
 
+const STRIPE_COLORS = [
+  "rgba(220,60,80,0.4)",
+  "rgba(255,255,255,0.25)",
+  "rgba(230,80,160,0.4)",
+  "rgba(140,50,160,0.4)",
+];
+const STRIPE_W = 44;
+const SINE_AMP = 14;
+const SINE_PERIOD = 260;
+const CANVAS = 3000;
+const NUM_STRIPES = Math.ceil(CANVAS / STRIPE_W) + 1;
+const PATH_STEPS = 80;
+
+function sineStripePath(i: number): string {
+  const topY = i * STRIPE_W;
+  const botY = topY + STRIPE_W;
+  let d = "";
+  for (let s = 0; s <= PATH_STEPS; s++) {
+    const x = (s / PATH_STEPS) * CANVAS;
+    const y = topY + SINE_AMP * Math.sin((2 * Math.PI * x) / SINE_PERIOD);
+    d += s === 0 ? `M${x},${y}` : `L${x},${y}`;
+  }
+  for (let s = PATH_STEPS; s >= 0; s--) {
+    const x = (s / PATH_STEPS) * CANVAS;
+    const y = botY + SINE_AMP * Math.sin((2 * Math.PI * x) / SINE_PERIOD);
+    d += `L${x},${y}`;
+  }
+  return d + "Z";
+}
+
+const STRIPE_PATHS = Array.from({ length: NUM_STRIPES }, (_, i) => ({
+  d: sineStripePath(i),
+  fill: STRIPE_COLORS[i % STRIPE_COLORS.length],
+}));
+
 const SPEED_LIMIT = 5;
 const RANGE_MIN = 0.1;
 const RANGE_MAX = 10;
@@ -25,23 +60,21 @@ interface Preset {
   feedback: number;
   fbDelay: number;
   dryWet: number;
-  inputGain: number;
-  outputVol: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Dry Coil",       speed: 1.0,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 0.25,  dryWet: 0.6,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Short Echo",     speed: 0.5,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: -0.4,  feedback: 0.5,  fbDelay: 0.15,  dryWet: 0.7,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Long Repeat",    speed: 0.8,   range: 1.5,   directionUp: false, numVoices: 10, tilt: 0.3,   feedback: 0.6,  fbDelay: 1.0,   dryWet: 0.7,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Tape Sustain",   speed: 2.0,   range: 0.5,   directionUp: true,  numVoices: 6,  tilt: 0.5,   feedback: 0.8,  fbDelay: 0.5,   dryWet: 0.5,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Dense Spiral",   speed: 0.77,  range: 2.032, directionUp: true,  numVoices: 12, tilt: 0.28,  feedback: 0.95, fbDelay: 4.487, dryWet: 1.0,  inputGain: 1.0, outputVol: 0.71 },
-  { name: "Tight Comb",     speed: 1.5,   range: 0.8,   directionUp: true,  numVoices: 4,  tilt: 0,     feedback: 0.7,  fbDelay: 0.08,  dryWet: 0.6,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Slow Wash",      speed: 0.2,   range: 3.0,   directionUp: true,  numVoices: 12, tilt: -0.3,  feedback: 0.8,  fbDelay: 2.5,   dryWet: 0.85, inputGain: 1.0, outputVol: 0.6 },
-  { name: "Falling Deep",   speed: 0.6,   range: 2.5,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 1.5,   dryWet: 0.8,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Fast & Dirty",   speed: 3.0,   range: 1.0,   directionUp: true,  numVoices: 4,  tilt: 0.6,   feedback: 0.6,  fbDelay: 0.25,  dryWet: 0.7,  inputGain: 1.0, outputVol: 0.4 },
-  { name: "Frozen Lake",    speed: 0.1,   range: 4.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.9,  fbDelay: 3.0,   dryWet: 0.95, inputGain: 0.8, outputVol: 0.6 },
-  { name: "Still Resonance", speed: 0.0, range: 0.101, directionUp: true,  numVoices: 6,  tilt: -0.67, feedback: 0.95, fbDelay: 0.001, dryWet: 1.0,  inputGain: 1.0, outputVol: 0.5 },
-  { name: "Dual Grind",     speed: 1.309, range: 0.104, directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.006, dryWet: 1.0,  inputGain: 1.0, outputVol: 0.5 },
+  { name: "Dry Coil",        speed: 1.0,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 0.25,  dryWet: 0.5 },
+  { name: "Short Echo",      speed: 0.3,   range: 0.4,   directionUp: true,  numVoices: 6,  tilt: -0.6,  feedback: 0.4,  fbDelay: 0.1,   dryWet: 0.65 },
+  { name: "Dual Grind",      speed: 1.309, range: 0.104, directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.006, dryWet: 1.0 },
+  { name: "Tape Sustain",    speed: 2.5,   range: 0.3,   directionUp: false, numVoices: 3,  tilt: 0.7,   feedback: 0.85, fbDelay: 0.35,  dryWet: 0.45 },
+  { name: "Dense Spiral",    speed: 0.77,  range: 2.032, directionUp: true,  numVoices: 12, tilt: 0.28,  feedback: 0.95, fbDelay: 4.487, dryWet: 1.0 },
+  { name: "Tight Comb",      speed: 4.0,   range: 0.2,   directionUp: true,  numVoices: 4,  tilt: 0,     feedback: 0.65, fbDelay: 0.015, dryWet: 0.55 },
+  { name: "Slow Wash",       speed: 0.08,  range: 5.0,   directionUp: true,  numVoices: 12, tilt: -0.5,  feedback: 0.85, fbDelay: 3.5,   dryWet: 0.9 },
+  { name: "Falling Deep",    speed: 0.6,   range: 2.5,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 1.5,   dryWet: 0.8 },
+  { name: "Fast & Dirty",    speed: 4.5,   range: 0.6,   directionUp: true,  numVoices: 2,  tilt: 0.8,   feedback: 0.5,  fbDelay: 0.04,  dryWet: 0.75 },
+  { name: "Frozen Lake",     speed: 0.03,  range: 7.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 4.0,   dryWet: 1.0 },
+  { name: "Still Resonance", speed: 0.0,   range: 0.101, directionUp: true,  numVoices: 6,  tilt: -0.67, feedback: 0.0,  fbDelay: 0.001, dryWet: 1.0 },
+  { name: "Long Repeat",     speed: 1.2,   range: 3.5,   directionUp: false, numVoices: 8,  tilt: 0.15,  feedback: 0.75, fbDelay: 2.0,   dryWet: 0.7 },
 ];
 
 function deriveParams(
@@ -225,8 +258,6 @@ export function CandyCoilDelay() {
     setFeedback(p.feedback);
     setFbDelay(p.fbDelay);
     setDryWet(p.dryWet);
-    setInputGain(p.inputGain);
-    setOutputVol(p.outputVol);
   };
 
   const startSaving = () => {
@@ -240,7 +271,7 @@ export function CandyCoilDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet, inputGain, outputVol },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -254,13 +285,33 @@ export function CandyCoilDelay() {
 
   return (
     <div>
+      <svg
+        viewBox={`0 0 ${CANVAS} ${CANVAS}`}
+        preserveAspectRatio="xMidYMid slice"
+        style={{
+          position: "fixed",
+          inset: 0,
+          width: "100vw",
+          height: "100vh",
+          zIndex: -1,
+          pointerEvents: "none",
+          transform: `rotate(${dirUp ? 45 : -45}deg) scale(1.6)`,
+          transformOrigin: "center center",
+        }}
+      >
+        {STRIPE_PATHS.map((s, i) => (
+          <path key={i} d={s.d} fill={s.fill} />
+        ))}
+      </svg>
       <h1 className="site-title" style={{ color: "#e05090" }}>
         Candy Coil Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
-        {numVoices} play heads sweep an exponential curve through the tape
-        buffer, each Hann-windowed and equidistant in phase — creating an
-        endlessly {dirUp ? "rising" : "falling"} Shepard pitch spiral.
+        {numVoices} sticky-sweet serpent heads spiral through infinite
+        candy-striped elastic tape — each voice Hann-windowed and
+        phase-staggered,         curling into an endless Shepard staircase of
+        pitch-shifting echoes. Deep in the snail shell, feedback
+        swirls between robotic terror and purring syrup.
       </p>
 
       <div className="source-bar">
@@ -296,7 +347,7 @@ export function CandyCoilDelay() {
       {source === "file" && !fileUrl && <audio ref={audioRef} />}
 
       <div className="transport">
-        <button className="play-btn" onClick={togglePlay}>
+        <button className="play-btn" style={{ opacity: 1, background: "transparent" }} onClick={togglePlay}>
           {playing ? "⏸ Pause" : "▶ Play"}
         </button>
         <div className="scope-wrap">
