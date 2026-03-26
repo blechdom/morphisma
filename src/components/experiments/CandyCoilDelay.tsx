@@ -110,7 +110,12 @@ export function CandyCoilDelay() {
 
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
   const [lockRatio, setLockRatio] = useState(false);
-  const [customPresets, setCustomPresets] = useState<Preset[]>([]);
+  const [customPresets, setCustomPresets] = useState<Preset[]>(() => {
+    try {
+      const stored = localStorage.getItem("candy-coil-presets");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
   const saveInputRef = useRef<HTMLInputElement>(null);
@@ -271,6 +276,11 @@ export function CandyCoilDelay() {
     setPresetName("");
     setTimeout(() => saveInputRef.current?.focus(), 0);
   };
+
+  useEffect(() => {
+    try { localStorage.setItem("candy-coil-presets", JSON.stringify(customPresets)); }
+    catch { /* storage full or unavailable */ }
+  }, [customPresets]);
 
   const savePreset = () => {
     const name = presetName.trim();
