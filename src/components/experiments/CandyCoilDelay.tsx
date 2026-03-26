@@ -311,7 +311,7 @@ export function CandyCoilDelay() {
           height: "100vh",
           zIndex: -1,
           pointerEvents: "none",
-          transform: `rotate(${dirUp ? 45 : -45}deg) scale(1.6)`,
+          transform: `rotate(${dirUp ? -45 : 45}deg) scale(1.6)`,
           transformOrigin: "center center",
         }}
       >
