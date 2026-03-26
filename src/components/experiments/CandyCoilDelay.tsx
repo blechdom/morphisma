@@ -11,22 +11,21 @@ import { Slider } from "@/components/Slider";
 
 type Source = "mic" | "file";
 
-const STRIPE_COLORS = [
-  "rgba(220,60,80,0.4)",
-  "rgba(255,255,255,0.25)",
-  "rgba(230,80,160,0.4)",
-  "rgba(140,50,160,0.4)",
+const STRIPES = [
+  { color: "rgba(220,60,80,0.4)",    width: 44 },
+  { color: "rgba(255,255,255,0.25)", width: 44 },
+  { color: "rgba(200,255,0,0.35)",   width: 12 },
+  { color: "rgba(230,80,160,0.4)",   width: 44 },
+  { color: "rgba(140,50,160,0.4)",   width: 44 },
 ];
-const STRIPE_W = 44;
+const REPEAT_H = STRIPES.reduce((s, b) => s + b.width, 0);
 const SINE_AMP = 14;
 const SINE_PERIOD = 260;
 const CANVAS = 3000;
-const NUM_STRIPES = Math.ceil(CANVAS / STRIPE_W) + 1;
 const PATH_STEPS = 80;
 
-function sineStripePath(i: number): string {
-  const topY = i * STRIPE_W;
-  const botY = topY + STRIPE_W;
+function sineStripePath(topY: number, height: number): string {
+  const botY = topY + height;
   let d = "";
   for (let s = 0; s <= PATH_STEPS; s++) {
     const x = (s / PATH_STEPS) * CANVAS;
@@ -41,10 +40,17 @@ function sineStripePath(i: number): string {
   return d + "Z";
 }
 
-const STRIPE_PATHS = Array.from({ length: NUM_STRIPES }, (_, i) => ({
-  d: sineStripePath(i),
-  fill: STRIPE_COLORS[i % STRIPE_COLORS.length],
-}));
+const STRIPE_PATHS: { d: string; fill: string }[] = [];
+{
+  let y = 0;
+  while (y < CANVAS) {
+    for (const { color, width } of STRIPES) {
+      if (y >= CANVAS) break;
+      STRIPE_PATHS.push({ d: sineStripePath(y, width), fill: color });
+      y += width;
+    }
+  }
+}
 
 const SPEED_LIMIT = 5;
 const RANGE_MIN = 0.1;
