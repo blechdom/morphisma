@@ -65,22 +65,23 @@ interface Preset {
   tilt: number;
   feedback: number;
   fbDelay: number;
+  globalFeedback: number;
   dryWet: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Centered Rise",   speed: 0.5,   range: 2.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 1.0,   dryWet: 0.8 },
-  { name: "Centered Fall",   speed: 0.5,   range: 2.0,   directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 1.0,   dryWet: 0.8 },
-  { name: "Slow Sludge",     speed: 0.1,   range: 4.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.7,  fbDelay: 3.0,   dryWet: 0.9 },
-  { name: "Thick Tar",       speed: 0.08,  range: 6.0,   directionUp: false, numVoices: 12, tilt: -0.3,  feedback: 0.85, fbDelay: 4.0,   dryWet: 1.0 },
-  { name: "Quick Stripe",    speed: 2.0,   range: 0.5,   directionUp: true,  numVoices: 4,  tilt: 0.5,   feedback: 0.4,  fbDelay: 0.5,   dryWet: 0.6 },
-  { name: "Mud Churn",       speed: 0.3,   range: 3.0,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.8,  fbDelay: 2.0,   dryWet: 0.85 },
-  { name: "Dual Grind",      speed: 1.3,   range: 0.1,   directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.01,  dryWet: 1.0 },
-  { name: "Wide Sweep",      speed: 0.15,  range: 5.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 2.0,   dryWet: 0.85 },
-  { name: "Frozen Bog",      speed: 0.02,  range: 8.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.9,  fbDelay: 5.0,   dryWet: 1.0 },
-  { name: "Tight Wobble",    speed: 1.5,   range: 0.3,   directionUp: true,  numVoices: 6,  tilt: -0.4,  feedback: 0.5,  fbDelay: 0.2,   dryWet: 0.55 },
-  { name: "Long Pour",       speed: 0.06,  range: 7.0,   directionUp: false, numVoices: 12, tilt: 0.2,   feedback: 0.75, fbDelay: 4.0,   dryWet: 0.95 },
-  { name: "Gentle Ooze",     speed: 0.2,   range: 1.5,   directionUp: true,  numVoices: 8,  tilt: 0.2,   feedback: 0.3,  fbDelay: 1.0,   dryWet: 0.5 },
+  { name: "Centered Rise",   speed: 0.5,   range: 2.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 1.0,   globalFeedback: 0, dryWet: 0.8 },
+  { name: "Centered Fall",   speed: 0.5,   range: 2.0,   directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 1.0,   globalFeedback: 0, dryWet: 0.8 },
+  { name: "Slow Sludge",     speed: 0.1,   range: 4.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.7,  fbDelay: 3.0,   globalFeedback: 0, dryWet: 0.9 },
+  { name: "Thick Tar",       speed: 0.08,  range: 6.0,   directionUp: false, numVoices: 12, tilt: -0.3,  feedback: 0.85, fbDelay: 4.0,   globalFeedback: 0, dryWet: 1.0 },
+  { name: "Quick Stripe",    speed: 2.0,   range: 0.5,   directionUp: true,  numVoices: 4,  tilt: 0.5,   feedback: 0.4,  fbDelay: 0.5,   globalFeedback: 0, dryWet: 0.6 },
+  { name: "Mud Churn",       speed: 0.3,   range: 3.0,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.8,  fbDelay: 2.0,   globalFeedback: 0, dryWet: 0.85 },
+  { name: "Dual Grind",      speed: 1.3,   range: 0.1,   directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.01,  globalFeedback: 0, dryWet: 1.0 },
+  { name: "Wide Sweep",      speed: 0.15,  range: 5.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 2.0,   globalFeedback: 0, dryWet: 0.85 },
+  { name: "Frozen Bog",      speed: 0.02,  range: 8.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.9,  fbDelay: 5.0,   globalFeedback: 0, dryWet: 1.0 },
+  { name: "Tight Wobble",    speed: 1.5,   range: 0.3,   directionUp: true,  numVoices: 6,  tilt: -0.4,  feedback: 0.5,  fbDelay: 0.2,   globalFeedback: 0, dryWet: 0.55 },
+  { name: "Long Pour",       speed: 0.06,  range: 7.0,   directionUp: false, numVoices: 12, tilt: 0.2,   feedback: 0.75, fbDelay: 4.0,   globalFeedback: 0, dryWet: 0.95 },
+  { name: "Gentle Ooze",     speed: 0.2,   range: 1.5,   directionUp: true,  numVoices: 8,  tilt: 0.2,   feedback: 0.3,  fbDelay: 1.0,   globalFeedback: 0, dryWet: 0.5 },
 ];
 
 const ACCENT = "#8ca030";
@@ -107,6 +108,7 @@ export function StripedSludgeDelay() {
   const [tilt, setTilt] = useState(0);
   const [feedback, setFeedback] = useState(0.0);
   const [fbDelay, setFbDelay] = useState(1.0);
+  const [globalFeedback, setGlobalFeedback] = useState(0.0);
   const [dryWet, setDryWet] = useState(0.8);
   const [inputGain, setInputGain] = useState(1.0);
 
@@ -133,6 +135,7 @@ export function StripedSludgeDelay() {
     tilt,
     feedback,
     fbDelay,
+    globalFeedback,
     dryWet,
     inputGain,
   });
@@ -233,6 +236,7 @@ export function StripedSludgeDelay() {
     setTilt(p.tilt);
     setFeedback(p.feedback);
     setFbDelay(p.fbDelay);
+    setGlobalFeedback(p.globalFeedback);
     setDryWet(p.dryWet);
   };
 
@@ -252,7 +256,7 @@ export function StripedSludgeDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, globalFeedback, dryWet },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -505,6 +509,14 @@ export function StripedSludgeDelay() {
           unit="s"
           curve={2}
           onChange={setFbDelay}
+        />
+        <Slider
+          label="Global FB"
+          value={globalFeedback}
+          min={0}
+          max={0.95}
+          step={0.01}
+          onChange={setGlobalFeedback}
         />
         <Slider
           label="Dry / Wet"

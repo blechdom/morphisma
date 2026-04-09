@@ -10,6 +10,7 @@ export interface SandySyrupDelayParams {
   tilt: number;
   feedback: number;
   fbDelay: number;
+  globalFeedback: number;
   dryWet: number;
   inputGain: number;
   grainSize: number;
@@ -33,7 +34,7 @@ export function sandySyrupDelayGraph(
   params: SandySyrupDelayParams,
   sampleRate: number
 ): NodeRepr_t {
-  const { numVoices, speed, range, directionUp, tilt, feedback, fbDelay, dryWet, inputGain, grainSize, blend } =
+  const { numVoices, speed, range, directionUp, tilt, feedback, fbDelay, globalFeedback, dryWet, inputGain, grainSize, blend } =
     params;
 
   const skew = Math.pow(2, tilt * 2);
@@ -53,10 +54,16 @@ export function sandySyrupDelayGraph(
     el.const({ key: "ssd-feedback", value: feedback })
   );
 
+  const smoothGlobalFb = el.sm(
+    el.const({ key: "ssd-gfb", value: globalFeedback })
+  );
+
   const fbSignal = el.tapIn({ name: "ssd-fb" }) as NodeRepr_t;
+  const globalFbSignal = el.tapIn({ name: "ssd-gfb-tap" }) as NodeRepr_t;
   const toBuffer = el.add(
     input,
-    el.mul(fbSignal, smoothFeedback)
+    el.mul(fbSignal, smoothFeedback),
+    el.mul(globalFbSignal, smoothGlobalFb)
   ) as NodeRepr_t;
 
   const fbHead = el.delay(
@@ -195,13 +202,14 @@ export function sandySyrupDelayGraph(
     voices.push(voice(i));
   }
   const mixed = addMany(voices);
+  const mixedTapped = el.tapOut({ name: "ssd-gfb-tap" }, mixed) as NodeRepr_t;
 
   const dry = el.mul(
     input,
     el.sm(el.const({ key: "ssd-dry", value: 1 - dryWet }))
   ) as NodeRepr_t;
   const wet = el.mul(
-    mixed,
+    mixedTapped,
     el.sm(el.const({ key: "ssd-wet", value: dryWet }))
   ) as NodeRepr_t;
 

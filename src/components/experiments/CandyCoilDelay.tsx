@@ -66,22 +66,23 @@ interface Preset {
   tilt: number;
   feedback: number;
   fbDelay: number;
+  globalFeedback: number;
   dryWet: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Dry Coil",        speed: 1.0,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 0.25,  dryWet: 0.5 },
-  { name: "Short Echo",      speed: 0.3,   range: 0.4,   directionUp: true,  numVoices: 6,  tilt: -0.6,  feedback: 0.4,  fbDelay: 0.1,   dryWet: 0.65 },
-  { name: "Dual Grind",      speed: 1.309, range: 0.104, directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.006, dryWet: 1.0 },
-  { name: "Tape Sustain",    speed: 2.5,   range: 0.3,   directionUp: false, numVoices: 3,  tilt: 0.7,   feedback: 0.85, fbDelay: 0.35,  dryWet: 0.45 },
-  { name: "Dense Spiral",    speed: 0.77,  range: 2.032, directionUp: true,  numVoices: 12, tilt: 0.28,  feedback: 0.95, fbDelay: 4.487, dryWet: 1.0 },
-  { name: "Tight Comb",      speed: 4.0,   range: 0.2,   directionUp: true,  numVoices: 4,  tilt: 0,     feedback: 0.65, fbDelay: 0.015, dryWet: 0.55 },
-  { name: "Slow Wash",       speed: 0.08,  range: 5.0,   directionUp: true,  numVoices: 12, tilt: -0.5,  feedback: 0.85, fbDelay: 3.5,   dryWet: 0.9 },
-  { name: "Falling Deep",    speed: 0.6,   range: 2.5,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 1.5,   dryWet: 0.8 },
-  { name: "Fast & Dirty",    speed: 4.5,   range: 0.6,   directionUp: true,  numVoices: 2,  tilt: 0.8,   feedback: 0.5,  fbDelay: 0.04,  dryWet: 0.75 },
-  { name: "Frozen Lake",     speed: 0.03,  range: 7.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 4.0,   dryWet: 1.0 },
-  { name: "Still Resonance", speed: 0.0,   range: 0.101, directionUp: true,  numVoices: 6,  tilt: -0.67, feedback: 0.0,  fbDelay: 0.001, dryWet: 1.0 },
-  { name: "Long Repeat",     speed: 1.2,   range: 3.5,   directionUp: false, numVoices: 8,  tilt: 0.15,  feedback: 0.75, fbDelay: 2.0,   dryWet: 0.7 },
+  { name: "Dry Coil",        speed: 1.0,   range: 1.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 0.25,  globalFeedback: 0, dryWet: 0.5 },
+  { name: "Short Echo",      speed: 0.3,   range: 0.4,   directionUp: true,  numVoices: 6,  tilt: -0.6,  feedback: 0.4,  fbDelay: 0.1,   globalFeedback: 0, dryWet: 0.65 },
+  { name: "Dual Grind",      speed: 1.309, range: 0.104, directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.006, globalFeedback: 0, dryWet: 1.0 },
+  { name: "Tape Sustain",    speed: 2.5,   range: 0.3,   directionUp: false, numVoices: 3,  tilt: 0.7,   feedback: 0.85, fbDelay: 0.35,  globalFeedback: 0, dryWet: 0.45 },
+  { name: "Dense Spiral",    speed: 0.77,  range: 2.032, directionUp: true,  numVoices: 12, tilt: 0.28,  feedback: 0.95, fbDelay: 4.487, globalFeedback: 0, dryWet: 1.0 },
+  { name: "Tight Comb",      speed: 4.0,   range: 0.2,   directionUp: true,  numVoices: 4,  tilt: 0,     feedback: 0.65, fbDelay: 0.015, globalFeedback: 0, dryWet: 0.55 },
+  { name: "Slow Wash",       speed: 0.08,  range: 5.0,   directionUp: true,  numVoices: 12, tilt: -0.5,  feedback: 0.85, fbDelay: 3.5,   globalFeedback: 0, dryWet: 0.9 },
+  { name: "Falling Deep",    speed: 0.6,   range: 2.5,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.7,  fbDelay: 1.5,   globalFeedback: 0, dryWet: 0.8 },
+  { name: "Fast & Dirty",    speed: 4.5,   range: 0.6,   directionUp: true,  numVoices: 2,  tilt: 0.8,   feedback: 0.5,  fbDelay: 0.04,  globalFeedback: 0, dryWet: 0.75 },
+  { name: "Frozen Lake",     speed: 0.03,  range: 7.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 4.0,   globalFeedback: 0, dryWet: 1.0 },
+  { name: "Still Resonance", speed: 0.0,   range: 0.101, directionUp: true,  numVoices: 6,  tilt: -0.67, feedback: 0.0,  fbDelay: 0.001, globalFeedback: 0, dryWet: 1.0 },
+  { name: "Long Repeat",     speed: 1.2,   range: 3.5,   directionUp: false, numVoices: 8,  tilt: 0.15,  feedback: 0.75, fbDelay: 2.0,   globalFeedback: 0, dryWet: 0.7 },
 ];
 
 function deriveParams(
@@ -106,6 +107,7 @@ export function CandyCoilDelay() {
   const [tilt, setTilt] = useState(0);
   const [feedback, setFeedback] = useState(0.0);
   const [fbDelay, setFbDelay] = useState(0.25);
+  const [globalFeedback, setGlobalFeedback] = useState(0.0);
   const [dryWet, setDryWet] = useState(0.7);
   const [inputGain, setInputGain] = useState(1.0);
 
@@ -136,6 +138,7 @@ export function CandyCoilDelay() {
     tilt,
     feedback,
     fbDelay,
+    globalFeedback,
     dryWet,
     inputGain,
   });
@@ -269,6 +272,7 @@ export function CandyCoilDelay() {
     setTilt(p.tilt);
     setFeedback(p.feedback);
     setFbDelay(p.fbDelay);
+    setGlobalFeedback(p.globalFeedback);
     setDryWet(p.dryWet);
   };
 
@@ -288,7 +292,7 @@ export function CandyCoilDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, globalFeedback, dryWet },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -569,6 +573,14 @@ export function CandyCoilDelay() {
           unit="s"
           curve={2}
           onChange={setFbDelay}
+        />
+        <Slider
+          label="Global FB"
+          value={globalFeedback}
+          min={0}
+          max={0.95}
+          step={0.01}
+          onChange={setGlobalFeedback}
         />
         <Slider
           label="Dry / Wet"

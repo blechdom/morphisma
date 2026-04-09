@@ -10,6 +10,7 @@ export interface StripedSludgeDelayParams {
   tilt: number;
   feedback: number;
   fbDelay: number;
+  globalFeedback: number;
   dryWet: number;
   inputGain: number;
 }
@@ -27,7 +28,7 @@ export function stripedSludgeDelayGraph(
   params: StripedSludgeDelayParams,
   sampleRate: number
 ): NodeRepr_t {
-  const { numVoices, speed, range, directionUp, tilt, feedback, fbDelay, dryWet, inputGain } =
+  const { numVoices, speed, range, directionUp, tilt, feedback, fbDelay, globalFeedback, dryWet, inputGain } =
     params;
 
   const skew = Math.pow(2, tilt * 2);
@@ -48,10 +49,16 @@ export function stripedSludgeDelayGraph(
     el.const({ key: "sld-feedback", value: feedback })
   );
 
+  const smoothGlobalFb = el.sm(
+    el.const({ key: "sld-gfb", value: globalFeedback })
+  );
+
   const fbSignal = el.tapIn({ name: "sld-fb" }) as NodeRepr_t;
+  const globalFbSignal = el.tapIn({ name: "sld-gfb-tap" }) as NodeRepr_t;
   const toBuffer = el.add(
     input,
-    el.mul(fbSignal, smoothFeedback)
+    el.mul(fbSignal, smoothFeedback),
+    el.mul(globalFbSignal, smoothGlobalFb)
   ) as NodeRepr_t;
 
   const fbHead = el.delay(
@@ -131,13 +138,14 @@ export function stripedSludgeDelayGraph(
     voices.push(voice(i));
   }
   const mixed = addMany(voices);
+  const mixedTapped = el.tapOut({ name: "sld-gfb-tap" }, mixed) as NodeRepr_t;
 
   const dry = el.mul(
     input,
     el.sm(el.const({ key: "sld-dry", value: 1 - dryWet }))
   ) as NodeRepr_t;
   const wet = el.mul(
-    mixed,
+    mixedTapped,
     el.sm(el.const({ key: "sld-wet", value: dryWet }))
   ) as NodeRepr_t;
 

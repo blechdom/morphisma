@@ -65,24 +65,25 @@ interface Preset {
   tilt: number;
   feedback: number;
   fbDelay: number;
+  globalFeedback: number;
   dryWet: number;
   grainSize: number;
   blend: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Silk Rise",        speed: 0.08,  range: 4.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.05,  blend: 0.5 },
-  { name: "Silk Fall",        speed: 0.08,  range: 4.0,  directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.05,  blend: 0.5 },
-  { name: "Pure Grit",        speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.08,  blend: 0.0 },
-  { name: "Pure Syrup",       speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.08,  blend: 1.0 },
-  { name: "Glacial Drift",    speed: 0.015, range: 8.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.75, fbDelay: 12.0,  dryWet: 1.0,  grainSize: 0.04,  blend: 0.7 },
-  { name: "Robot Grind",      speed: 1.2,   range: 1.0,  directionUp: false, numVoices: 2,  tilt: -0.6,  feedback: 0.93, fbDelay: 2.0,   dryWet: 1.0,  grainSize: 0.015, blend: 0.0 },
-  { name: "Grain Cloud",      speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 10, tilt: -0.3,  feedback: 0.3,  fbDelay: 5.0,   dryWet: 0.9,  grainSize: 0.3,   blend: 0.0 },
-  { name: "Silk Glide",       speed: 0.05,  range: 6.0,  directionUp: false, numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 6.0,   dryWet: 0.8,  grainSize: 0.008, blend: 1.0 },
-  { name: "Metal Shimmer",    speed: 0.6,   range: 1.0,  directionUp: true,  numVoices: 6,  tilt: 0.7,   feedback: 0.5,  fbDelay: 1.5,   dryWet: 0.7,  grainSize: 0.01,  blend: 0.3 },
-  { name: "Feedback Drone",   speed: 0.03,  range: 2.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 8.0,   dryWet: 1.0,  grainSize: 0.06,  blend: 0.6 },
-  { name: "Full Spectrum",    speed: 0.04,  range: 10.0, directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 10.0,  dryWet: 1.0,  grainSize: 0.03,  blend: 0.8 },
-  { name: "Gentle Blend",     speed: 0.12,  range: 2.0,  directionUp: false, numVoices: 6,  tilt: 0.2,   feedback: 0.2,  fbDelay: 3.0,   dryWet: 0.4,  grainSize: 0.06,  blend: 0.4 },
+  { name: "Silk Rise",        speed: 0.08,  range: 4.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   globalFeedback: 0, dryWet: 0.85, grainSize: 0.05,  blend: 0.5 },
+  { name: "Silk Fall",        speed: 0.08,  range: 4.0,  directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   globalFeedback: 0, dryWet: 0.85, grainSize: 0.05,  blend: 0.5 },
+  { name: "Pure Grit",        speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   globalFeedback: 0, dryWet: 0.85, grainSize: 0.08,  blend: 0.0 },
+  { name: "Pure Syrup",       speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   globalFeedback: 0, dryWet: 0.85, grainSize: 0.08,  blend: 1.0 },
+  { name: "Glacial Drift",    speed: 0.015, range: 8.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.75, fbDelay: 12.0,  globalFeedback: 0, dryWet: 1.0,  grainSize: 0.04,  blend: 0.7 },
+  { name: "Robot Grind",      speed: 1.2,   range: 1.0,  directionUp: false, numVoices: 2,  tilt: -0.6,  feedback: 0.93, fbDelay: 2.0,   globalFeedback: 0, dryWet: 1.0,  grainSize: 0.015, blend: 0.0 },
+  { name: "Grain Cloud",      speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 10, tilt: -0.3,  feedback: 0.3,  fbDelay: 5.0,   globalFeedback: 0, dryWet: 0.9,  grainSize: 0.3,   blend: 0.0 },
+  { name: "Silk Glide",       speed: 0.05,  range: 6.0,  directionUp: false, numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 6.0,   globalFeedback: 0, dryWet: 0.8,  grainSize: 0.008, blend: 1.0 },
+  { name: "Metal Shimmer",    speed: 0.6,   range: 1.0,  directionUp: true,  numVoices: 6,  tilt: 0.7,   feedback: 0.5,  fbDelay: 1.5,   globalFeedback: 0, dryWet: 0.7,  grainSize: 0.01,  blend: 0.3 },
+  { name: "Feedback Drone",   speed: 0.03,  range: 2.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 8.0,   globalFeedback: 0, dryWet: 1.0,  grainSize: 0.06,  blend: 0.6 },
+  { name: "Full Spectrum",    speed: 0.04,  range: 10.0, directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 10.0,  globalFeedback: 0, dryWet: 1.0,  grainSize: 0.03,  blend: 0.8 },
+  { name: "Gentle Blend",     speed: 0.12,  range: 2.0,  directionUp: false, numVoices: 6,  tilt: 0.2,   feedback: 0.2,  fbDelay: 3.0,   globalFeedback: 0, dryWet: 0.4,  grainSize: 0.06,  blend: 0.4 },
 ];
 
 const ACCENT = "#20ccaa";
@@ -109,6 +110,7 @@ export function SandySyrupDelay() {
   const [tilt, setTilt] = useState(0);
   const [feedback, setFeedback] = useState(0.0);
   const [fbDelay, setFbDelay] = useState(4.0);
+  const [globalFeedback, setGlobalFeedback] = useState(0.0);
   const [dryWet, setDryWet] = useState(0.8);
   const [inputGain, setInputGain] = useState(1.0);
   const [grainSize, setGrainSize] = useState(0.05);
@@ -136,6 +138,7 @@ export function SandySyrupDelay() {
     tilt,
     feedback,
     fbDelay,
+    globalFeedback,
     dryWet,
     inputGain,
     grainSize,
@@ -238,6 +241,7 @@ export function SandySyrupDelay() {
     setTilt(p.tilt);
     setFeedback(p.feedback);
     setFbDelay(p.fbDelay);
+    setGlobalFeedback(p.globalFeedback);
     setDryWet(p.dryWet);
     setGrainSize(p.grainSize);
     setBlend(p.blend);
@@ -259,7 +263,7 @@ export function SandySyrupDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet, grainSize, blend },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, globalFeedback, dryWet, grainSize, blend },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -272,13 +276,13 @@ export function SandySyrupDelay() {
   const allPresets = [...BUILT_IN_PRESETS, ...customPresets];
 
   return (
-    <div className="silk-sweep-page">
+    <div className="sandy-syrup-page">
       <style>{`
-        .silk-sweep-page input[type="range"]::-webkit-slider-thumb { background: ${ACCENT} !important; }
-        .silk-sweep-page input[type="range"]::-moz-range-thumb { background: ${ACCENT} !important; }
-        .silk-sweep-page .play-btn { border-color: ${ACCENT} !important; color: ${ACCENT} !important; }
-        .silk-sweep-page .play-btn:hover { background: ${ACCENT} !important; color: #0a0a0a !important; }
-        .silk-sweep-page .source-btn.active { background: ${ACCENT} !important; border-color: ${ACCENT} !important; }
+        .sandy-syrup-page input[type="range"]::-webkit-slider-thumb { background: ${ACCENT} !important; }
+        .sandy-syrup-page input[type="range"]::-moz-range-thumb { background: ${ACCENT} !important; }
+        .sandy-syrup-page .play-btn { border-color: ${ACCENT} !important; color: ${ACCENT} !important; }
+        .sandy-syrup-page .play-btn:hover { background: ${ACCENT} !important; color: #0a0a0a !important; }
+        .sandy-syrup-page .source-btn.active { background: ${ACCENT} !important; border-color: ${ACCENT} !important; }
       `}</style>
       <svg
         viewBox={`0 0 ${CANVAS} ${CANVAS}`}
@@ -538,6 +542,14 @@ export function SandySyrupDelay() {
           unit="s"
           curve={2}
           onChange={setFbDelay}
+        />
+        <Slider
+          label="Global FB"
+          value={globalFeedback}
+          min={0}
+          max={0.95}
+          step={0.01}
+          onChange={setGlobalFeedback}
         />
         <Slider
           label="Dry / Wet"
