@@ -25,25 +25,45 @@ export function Mermaid({ chart }: { chart: string }) {
   useEffect(() => {
     if (!ref.current) return;
     const container = ref.current;
-    container.innerHTML = "";
+    let cancelled = false;
+
     const uid = `mermaid-${Date.now()}-${idCounter++}`;
-    mermaid.render(uid, chart).then(({ svg }) => {
-      container.innerHTML = svg;
-      const svgEl = container.querySelector("svg");
-      if (svgEl) {
-        svgEl.style.minWidth = "800px";
-        svgEl.style.width = "100%";
-        svgEl.style.height = "auto";
-        svgEl.removeAttribute("height");
+
+    const renderTarget = document.createElement("div");
+    renderTarget.id = uid;
+    renderTarget.style.visibility = "hidden";
+    renderTarget.style.position = "absolute";
+    renderTarget.style.width = "0";
+    renderTarget.style.height = "0";
+    renderTarget.style.overflow = "hidden";
+    document.body.appendChild(renderTarget);
+
+    (async () => {
+      try {
+        const { svg } = await mermaid.render(uid, chart);
+        if (!cancelled && ref.current) {
+          ref.current.innerHTML = svg;
+          const svgEl = ref.current.querySelector("svg");
+          if (svgEl) {
+            svgEl.style.minWidth = "800px";
+            svgEl.style.width = "100%";
+            svgEl.style.height = "auto";
+            svgEl.removeAttribute("height");
+          }
+        }
+      } catch {
+        if (!cancelled && ref.current) {
+          ref.current.innerHTML = `<pre style="color:#f66">${chart}</pre>`;
+        }
+      } finally {
+        renderTarget.remove();
       }
-    }).catch((err) => {
-      console.error("Mermaid render error:", err);
-      container.innerHTML = `<pre style="color:#f66">${chart}</pre>`;
-    });
+    })();
 
     return () => {
-      const stale = document.getElementById(uid);
-      if (stale) stale.remove();
+      cancelled = true;
+      container.innerHTML = "";
+      renderTarget.remove();
     };
   }, [chart]);
 

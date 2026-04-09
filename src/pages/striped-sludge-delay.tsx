@@ -17,7 +17,7 @@ export default function StripedSludgeDelayPage() {
         <title>Striped Sludge Delay — MORPHISMA</title>
       </Head>
       <div className="page-narrow">
-        <Link href="/" className="back-link">
+        <Link href="/" className="back-link" style={{ color: "#8ca030" }}>
           ← morphisma
         </Link>
         <StripedSludgeDelay />

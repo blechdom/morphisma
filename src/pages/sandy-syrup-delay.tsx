@@ -17,7 +17,7 @@ export default function SandySyrupDelayPage() {
         <title>Sandy Syrup Delay — MORPHISMA</title>
       </Head>
       <div className="page-narrow">
-        <Link href="/" className="back-link">
+        <Link href="/" className="back-link" style={{ color: "#20ccaa" }}>
           ← morphisma
         </Link>
         <SandySyrupDelay />

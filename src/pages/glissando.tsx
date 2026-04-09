@@ -17,7 +17,7 @@ export default function GlissandoPage() {
         <title>Shepard-Risset Glissando — MORPHISMA</title>
       </Head>
       <div className="page-narrow">
-        <Link href="/" className="back-link">
+        <Link href="/" className="back-link" style={{ color: "#ff4444" }}>
           ← morphisma
         </Link>
         <ShepardRisset />

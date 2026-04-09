@@ -15,7 +15,7 @@ type Source = "mic" | "file";
 const STRIPES = [
   { color: "rgba(80,100,40,0.4)",    width: 44 },
   { color: "rgba(20,15,10,0.35)",    width: 44 },
-  { color: "rgba(160,120,40,0.4)",   width: 12 },
+  { color: "rgba(80,200,255,0.45)",   width: 12 },
   { color: "rgba(60,80,50,0.35)",    width: 44 },
   { color: "rgba(90,60,30,0.4)",     width: 44 },
 ];
@@ -529,9 +529,10 @@ export function StripedSludgeDelay() {
       </div>
 
       <Mermaid chart={`graph TD
-  IN["Input -- mic / file"] -->|"x gain"| PLUS["(+) mix"]
+  IN["Input -- mic / file"] -->|"x gain"| PLUS["(+) buffer input"]
   FB_RD -->|"x feedback"| PLUS
-  PLUS --> WRITE["Write to buffer"]
+  GFB_TAP -->|"x globalFeedback"| PLUS
+  PLUS --> WRITE["Write to circular buffer"]
   WRITE --> FB_RD["fbHead: read at fbDelay -- SILENT"]
   FB_RD -->|"x 0 -- not heard"| SINK["fbSink"]
   WRITE --> V0["Voice 0: centered hump delay"]
@@ -540,19 +541,17 @@ export function StripedSludgeDelay() {
   V0 -->|"x Hann window"| SUM["Sum all voices"]
   V1 -->|"x Hann window"| SUM
   VN -->|"x Hann window"| SUM
-  SUM -->|"x dryWet"| WET["Wet signal"]
+  SUM --> GFB_TAP["Global FB tap -- mixed voices"]
+  GFB_TAP -->|"x dryWet"| WET["Wet signal"]
   IN -->|"x 1 - dryWet"| DRY["Dry signal"]
   DRY --> OUT_MIX["(+) output"]
   WET --> OUT_MIX
+  SINK --> OUT_MIX
   OUT_MIX --> OUT["Output"]
-
-  subgraph "Centered Hump Delay -- dirUp"
-    direction LR
-    A["p=0: delay=0"] --> B["p=0.5: delay=range -- peak"]
-    B --> C["p=1: delay=0"]
-    D["pitch BELOW original"] --> E["original pitch -- loudest"]
-    E --> F["pitch ABOVE original"]
-  end
+  OUT --> HUMP["Centered Hump Curve"]
+  HUMP --> H1["p=0 delay=0 — pitch BELOW original"]
+  HUMP --> H2["p=0.5 delay=range peak — ORIGINAL pitch loudest"]
+  HUMP --> H3["p=1 delay=0 — pitch ABOVE original"]
 `} />
     </div>
   );

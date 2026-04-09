@@ -17,7 +17,7 @@ export default function CandyCoilDelayPage() {
         <title>Candy Coil Delay — MORPHISMA</title>
       </Head>
       <div className="page-narrow">
-        <Link href="/" className="back-link">
+        <Link href="/" className="back-link" style={{ color: "#e05090" }}>
           ← morphisma
         </Link>
         <CandyCoilDelay />

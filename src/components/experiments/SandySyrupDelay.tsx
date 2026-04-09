@@ -562,41 +562,56 @@ export function SandySyrupDelay() {
       </div>
 
       <Mermaid chart={`graph TD
-  IN["Input -- mic / file"] -->|"x inputGain"| PLUS["(+) mix"]
+  IN["Input -- mic / file"] -->|"x inputGain"| PLUS["(+) buffer input"]
   FB_RD -->|"x feedback"| PLUS
-  PLUS --> BUF["toBuffer -- circular buffer"]
-  BUF --> FB_RD["fbHead: read at fbDelay"]
-  FB_RD -->|"x 0 -- SILENT"| SINK["fbSink"]
+  GFB_TAP -->|"x globalFeedback"| PLUS
+  PLUS --> BUF["Write to circular buffer"]
+  BUF --> FB_RD["fbHead: read at fbDelay -- SILENT"]
+  FB_RD -->|"x 0 -- not heard"| SINK["fbSink"]
   BUF --> V0["Voice 0 -- phase 0/N"]
   BUF --> V1["Voice 1 -- phase 1/N"]
   BUF --> VN["Voice N -- phase N-1/N"]
   V0 -->|"x sweepHann"| SUM["Sum all voices"]
   V1 -->|"x sweepHann"| SUM
   VN -->|"x sweepHann"| SUM
-  SUM -->|"x dryWet"| WET["Wet signal"]
+  SUM --> GFB_TAP["Global FB tap -- mixed voices"]
+  GFB_TAP -->|"x dryWet"| WET["Wet signal"]
   IN -->|"x 1 - dryWet"| DRY["Dry signal"]
-  DRY --> OUT_MIX["(+) output mix"]
+  DRY --> OUT_MIX["(+) output"]
   WET --> OUT_MIX
   SINK --> OUT_MIX
   OUT_MIX --> OUT["Output"]
 `} />
+      <h3 style={{ color: "#20ccaa", marginTop: "2rem", fontSize: "0.85rem", opacity: 0.8 }}>Per-Voice Granular Detail</h3>
       <Mermaid chart={`graph TD
-  subgraph "Per Voice -- Granular Detail"
-    SW["sweepPhasor = phasor + i/N"] --> POS["basePosition = expCurve x fbDelay"]
-    SW --> RATE["rate = 2^ octaves x phasor - 0.5 x dir"]
-    POS --> SH_A["Stream A: S/H position + rate at grain boundary"]
-    RATE --> SH_A
-    POS --> SH_B["Stream B: S/H at +1/2 grain offset"]
-    RATE --> SH_B
-    SH_A --> RAMP_A["delayRamp = 1 - heldRate x grainPhasor x dur"]
-    SH_B --> RAMP_B["delayRamp = 1 - heldRate x grainPhasor x dur"]
-    RAMP_A --> RD_A["Read buffer at actualDelay"]
-    RAMP_B --> RD_B["Read buffer at actualDelay"]
-    RD_A -->|"x hannA"| OLA["Overlap-add: hannA + hannB = 1.0"]
-    RD_B -->|"x hannB"| OLA
-    OLA -->|"x sweepHann x voiceGain"| VOUT["Voice output"]
-  end
+  SW["sweepPhasor"] --> POS["basePosition"]
+  SW --> RATE["targetRate"]
+
+  POS --> SHA["Stream A: latch pos + rate"]
+  RATE --> SHA
+  POS --> SHB["Stream B: latch at +½ grain"]
+  RATE --> SHB
+
+  BL["blend slider"] --> EFFA["effectiveRate A"]
+  SHA --> EFFA
+  BL --> EFFB["effectiveRate B"]
+  SHB --> EFFB
+
+  EFFA --> RA["delay ramp A"]
+  EFFB --> RB["delay ramp B"]
+
+  RA --> RDA["Read buffer A"]
+  RB --> RDB["Read buffer B"]
+
+  RDA -->|"x hannA"| OLA["Overlap-add"]
+  RDB -->|"x hannB"| OLA
+  OLA -->|"x sweepHann"| VOUT["Voice out"]
 `} />
+      <p style={{ opacity: 0.5, fontSize: "0.7rem", marginTop: "0.5rem" }}>
+        Sand = each grain locks its rate at grain start.
+        Syrup = rate follows the live control ramp within each grain.
+        Blend interpolates between the two.
+      </p>
     </div>
   );
 }

@@ -1,11 +1,15 @@
 import Head from "next/head";
 import Link from "next/link";
 
-const CANDY_BG = `repeating-linear-gradient(45deg, rgba(220,60,80,0.12) 0px, rgba(220,60,80,0.12) 10px, rgba(255,255,255,0.07) 10px, rgba(255,255,255,0.07) 20px, rgba(200,255,0,0.1) 20px, rgba(200,255,0,0.1) 24px, rgba(230,80,160,0.12) 24px, rgba(230,80,160,0.12) 34px, rgba(140,50,160,0.12) 34px, rgba(140,50,160,0.12) 44px)`;
+const GLISSANDO_BG = `repeating-linear-gradient(45deg, rgba(200,30,30,0.3) 0px, rgba(200,30,30,0.3) 10px, rgba(255,255,255,0.18) 10px, rgba(255,255,255,0.18) 20px, rgba(180,20,20,0.25) 20px, rgba(180,20,20,0.25) 24px, rgba(255,240,240,0.18) 24px, rgba(255,240,240,0.18) 34px, rgba(220,50,50,0.3) 34px, rgba(220,50,50,0.3) 44px)`;
 
-const SLUDGE_BG = `repeating-linear-gradient(-45deg, rgba(80,100,40,0.12) 0px, rgba(80,100,40,0.12) 10px, rgba(20,15,10,0.1) 10px, rgba(20,15,10,0.1) 20px, rgba(160,120,40,0.12) 20px, rgba(160,120,40,0.12) 24px, rgba(60,80,50,0.1) 24px, rgba(60,80,50,0.1) 34px, rgba(90,60,30,0.12) 34px, rgba(90,60,30,0.12) 44px)`;
+const CANDY_BG = `repeating-linear-gradient(45deg, rgba(220,60,80,0.3) 0px, rgba(220,60,80,0.3) 10px, rgba(255,255,255,0.18) 10px, rgba(255,255,255,0.18) 20px, rgba(200,255,0,0.25) 20px, rgba(200,255,0,0.25) 24px, rgba(230,80,160,0.3) 24px, rgba(230,80,160,0.3) 34px, rgba(140,50,160,0.3) 34px, rgba(140,50,160,0.3) 44px)`;
 
-const SANDY_BG = `repeating-linear-gradient(45deg, rgba(40,180,130,0.12) 0px, rgba(40,180,130,0.12) 10px, rgba(20,10,40,0.1) 10px, rgba(20,10,40,0.1) 20px, rgba(0,220,200,0.12) 20px, rgba(0,220,200,0.12) 24px, rgba(110,60,180,0.1) 24px, rgba(110,60,180,0.1) 34px, rgba(30,140,130,0.12) 34px, rgba(30,140,130,0.12) 44px)`;
+const SLUDGE_BG = `repeating-linear-gradient(-45deg, rgba(80,100,40,0.3) 0px, rgba(80,100,40,0.3) 10px, rgba(20,15,10,0.25) 10px, rgba(20,15,10,0.25) 20px, rgba(160,120,40,0.3) 20px, rgba(160,120,40,0.3) 24px, rgba(60,80,50,0.25) 24px, rgba(60,80,50,0.25) 34px, rgba(90,60,30,0.3) 34px, rgba(90,60,30,0.3) 44px)`;
+
+const SANDY_BG = `repeating-linear-gradient(45deg, rgba(40,180,130,0.3) 0px, rgba(40,180,130,0.3) 10px, rgba(20,10,40,0.25) 10px, rgba(20,10,40,0.25) 20px, rgba(0,220,200,0.3) 20px, rgba(0,220,200,0.3) 24px, rgba(110,60,180,0.25) 24px, rgba(110,60,180,0.25) 34px, rgba(30,140,130,0.3) 34px, rgba(30,140,130,0.3) 44px)`;
+
+const BIPOLAR_BG = `repeating-linear-gradient(-45deg, rgba(80,20,140,0.3) 0px, rgba(80,20,140,0.3) 10px, rgba(15,10,25,0.25) 10px, rgba(15,10,25,0.25) 20px, rgba(255,50,200,0.3) 20px, rgba(255,50,200,0.3) 24px, rgba(60,20,100,0.25) 24px, rgba(60,20,100,0.25) 34px, rgba(120,40,180,0.3) 34px, rgba(120,40,180,0.3) 44px)`;
 
 const EXPERIMENTS = [
   {
@@ -14,31 +18,8 @@ const EXPERIMENTS = [
     description:
       "Auditory illusion of an endlessly rising or falling tone, built from phase-offset sine oscillators with bell-curve envelopes.",
     tag: "synthesis",
-    background: undefined as string | undefined,
-  },
-  {
-    href: "/shepard-delay-global-feedback",
-    title: "Shepard Delay — Global Feedback",
-    description:
-      "Variant of the Shepard Delay with a global feedback loop — the mixed output feeds back into the delay network for denser, more chaotic textures.",
-    tag: "effect",
-    background: undefined as string | undefined,
-  },
-  {
-    href: "/simple-tape-delay",
-    title: "Simple Tape Delay",
-    description:
-      "One circular buffer, one read head, one feedback path — the fundamental building block of all the other delay experiments.",
-    tag: "effect",
-    background: undefined as string | undefined,
-  },
-  {
-    href: "/tape-delay",
-    title: "Multi-Head Tape Delay",
-    description:
-      "Circular buffer modelled as infinite tape — a record head writes continuously while a movable play head reads back at a variable delay, with feedback.",
-    tag: "effect",
-    background: undefined as string | undefined,
+    background: GLISSANDO_BG,
+    titleColor: "#ff4444",
   },
   {
     href: "/candy-coil-delay",
@@ -47,6 +28,7 @@ const EXPERIMENTS = [
       "A variation on the Risset Tape Delay — same spiraling architecture, new flavor.",
     tag: "effect",
     background: CANDY_BG,
+    titleColor: "#e05090",
   },
   {
     href: "/striped-sludge-delay",
@@ -55,14 +37,25 @@ const EXPERIMENTS = [
       "Candy Coil variant with a centered delay hump — voices sweep below and above the original pitch, creating a true Shepard spiral through the source frequency.",
     tag: "effect",
     background: SLUDGE_BG,
+    titleColor: "#8ca030",
   },
   {
     href: "/sandy-syrup-delay",
     title: "Sandy Syrup Delay",
     description:
-      "Overlap-add granular pitch-shifting delay — each grain locks a playback rate from slow to fast, with a Grit↔Syrup blend for texture control.",
+      "Overlap-add granular pitch-shifting delay — each grain locks a playback rate from slow to fast. Sand = each grain locks its rate at grain start. Syrup = rate follows the live control ramp within each grain. Blend interpolates between the two.",
     tag: "effect",
     background: SANDY_BG,
+    titleColor: "#20ccaa",
+  },
+  {
+    href: "/bipolar-breakdown-delay",
+    title: "Bipolar Breakdown Delay",
+    description:
+      "WORK-IN-PROGRESS — A play head loops from a fixed anchor to the record head — each pass covers more buffer in the same time, accelerating until it breaks down.",
+    tag: "effect",
+    background: BIPOLAR_BG,
+    titleColor: "#cc88dd",
   },
 ];
 
@@ -80,7 +73,7 @@ export default function Home() {
         <div className="experiment-grid">
           {EXPERIMENTS.map((exp) => (
             <Link key={exp.href} href={exp.href} className="experiment-card" style={exp.background ? { backgroundImage: exp.background } : undefined}>
-              <h3>{exp.title}</h3>
+              <h3 style={exp.titleColor ? { color: exp.titleColor } : undefined}>{exp.title}</h3>
               <p>{exp.description}</p>
               <span className="tag">{exp.tag}</span>
             </Link>

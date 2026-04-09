@@ -99,7 +99,8 @@ export function sandySyrupDelayGraph(
   );
 
   const sweepDuration = speed > 0 ? 1 / speed : 10;
-  const grainsPerSweep = Math.max(1, Math.round(sweepDuration / Math.max(0.005, grainSize)));
+  const grainsPerSweep = Math.max(1, sweepDuration / Math.max(0.005, grainSize));
+  const smoothGPS = el.sm(el.const({ key: "ssd-gps", value: grainsPerSweep }));
 
   const normFactor = 1 / (Math.pow(2, octaves) - 1);
   const smoothNorm = el.sm(
@@ -141,11 +142,9 @@ export function sandySyrupDelayGraph(
       el.sub(1.0, el.cos(el.mul(2 * Math.PI, skewedSweep)))
     );
 
-    const gpsConst = el.const({ key: `ssd-gps-${index}`, value: grainsPerSweep });
-
     function grainStream(streamOffset: number, suffix: string) {
       const grainPhase = el.add(
-        el.mul(sweepPhasor, gpsConst),
+        el.mul(sweepPhasor, smoothGPS),
         streamOffset
       );
       const grainIdx = el.floor(grainPhase);
