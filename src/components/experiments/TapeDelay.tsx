@@ -11,6 +11,7 @@ import {
 import * as engine from "@/audio/delay-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
+import { Mermaid } from "@/components/Mermaid";
 
 type Source = "mic" | "file";
 
@@ -306,42 +307,23 @@ export function TapeDelay() {
         ))}
       </div>
 
-      <pre style={{
-        fontSize: "0.6rem",
-        lineHeight: 1.4,
-        color: "#888",
-        background: "#111",
-        padding: "0.75rem",
-        borderRadius: "6px",
-        overflow: "auto",
-        marginTop: "1.5rem",
-      }}>{`
-  input (mic / file)
-    │
-    ▼
-   (+)◄──────────── mixed head output × feedback (global loop via tapIn/tapOut)
-    │                        ▲
-    ▼                        │
-  [write to buffer]          │
-    │                        │
-    ├─── [head 0: read at delayTime₀] ──► × level₀ ──┐
-    ├─── [head 1: read at delayTime₁] ──► × level₁ ──┤
-    ├─── ...                                           ├──► mixed heads
-    └─── [head N: read at delayTimeₙ] ──► × levelₙ ──┘        │
-                                                               │
-                                                          tapOut ──► feeds back
-                                                               │
-                                                        wet × dryWet
-                                                               │
-    input × (1 - dryWet) ──────────────────────────►(+)◄───────┘
-                                                     │
-                                                     ▼
-                                                  output
-
-  Each head reads at a fixed delay time (adjustable).
-  The mixed output of all heads feeds back globally.
-  Moving a head's delay time produces tape-style pitch artifacts.
-`}</pre>
+      <Mermaid chart={`graph TD
+  IN["Input -- mic / file"] -->|"x gain"| PLUS["(+) mix"]
+  FB_OUT -->|"x feedback"| PLUS
+  PLUS --> WRITE["Write to buffer"]
+  WRITE --> H0["Head 0: read at delayTime 0"]
+  WRITE --> H1["Head 1: read at delayTime 1"]
+  WRITE --> HN["Head N: read at delayTime N"]
+  H0 -->|"x level 0"| MIX_H["Sum all heads"]
+  H1 -->|"x level 1"| MIX_H
+  HN -->|"x level N"| MIX_H
+  MIX_H --> FB_OUT["tapOut -- feedback path"]
+  MIX_H -->|"x dryWet"| WET["Wet signal"]
+  IN -->|"x 1 - dryWet"| DRY["Dry signal"]
+  DRY --> OUT_MIX["(+) output mix"]
+  WET --> OUT_MIX
+  OUT_MIX --> OUT["Output"]
+`} />
     </div>
   );
 }

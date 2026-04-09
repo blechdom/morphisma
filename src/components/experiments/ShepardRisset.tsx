@@ -7,6 +7,7 @@ import {
 import * as engine from "@/audio/glissando-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
+import { Mermaid } from "@/components/Mermaid";
 
 type Preset = [number, number, number, number, boolean];
 
@@ -166,32 +167,20 @@ export function ShepardRisset() {
         ))}
       </div>
 
-      <pre style={{
-        fontSize: "0.6rem",
-        lineHeight: 1.4,
-        color: "#888",
-        background: "#111",
-        padding: "0.75rem",
-        borderRadius: "6px",
-        overflow: "auto",
-        marginTop: "1.5rem",
-      }}>{`
-  [voice 0: phasor + phase offset] ──► freq sweep ──► sine osc ──► × envelope ──┐
-  [voice 1: phasor + phase offset] ──► freq sweep ──► sine osc ──► × envelope ──┤
-  ...                                                                            ├──► sum ──► output
-  [voice N: phasor + phase offset] ──► freq sweep ──► sine osc ──► × envelope ──┘
-
-  Each voice:
-    phasor (0→1 at speed Hz) + phase offset ──► quadratic freq curve
-                                                    │
-    startFreq + curve × freqRange ──► el.cycle (sine oscillator)
-                                                    │
-    bell-curve envelope (same phasor) ──► × ──► voiced output
-
-  No input. No delay. No feedback.
-  Pure synthesis: N crossfading sine oscillators sweep
-  through a frequency range, creating the Shepard tone illusion.
-`}</pre>
+      <Mermaid chart={`graph TD
+  P["phasor at speed Hz"] --> V0["Voice 0: +phase offset"]
+  P --> V1["Voice 1: +phase offset"]
+  P --> VN["Voice N: +phase offset"]
+  V0 --> |"x bell envelope"| SUM["Sum all voices"]
+  V1 --> |"x bell envelope"| SUM
+  VN --> |"x bell envelope"| SUM
+  SUM --> OUT["Output"]
+  subgraph "Per Voice"
+    PH["phasor + offset"] --> FREQ["freq = start + mod^2 x range"]
+    FREQ --> SINE["el.cycle -- sine osc"]
+    SINE --> ENV["x half-sine envelope"]
+  end
+`} />
     </div>
   );
 }

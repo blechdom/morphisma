@@ -7,6 +7,7 @@ import {
 import * as engine from "@/audio/delay-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
+import { Mermaid } from "@/components/Mermaid";
 
 type Source = "mic" | "file";
 
@@ -174,35 +175,18 @@ export function SimpleTapeDelay() {
         fundamental building block of all the other delay experiments.
       </p>
 
-      <pre style={{
-        fontSize: "0.6rem",
-        lineHeight: 1.4,
-        color: "#888",
-        background: "#111",
-        padding: "0.75rem",
-        borderRadius: "6px",
-        overflow: "auto",
-        marginBottom: "1.5rem",
-      }}>{`
-  input (mic / file)
-    │
-    ▼
-   (+)◄──── read output × feedback
-    │                ▲
-    ▼                │
-  [write to buffer] ··· [read from buffer at delayTime]
-    │                           │
-    │                           ▼
-    │                     wet signal × dryWet
-    │                           │
-    ▼                           ▼
-  input × (1 - dryWet)       (+)
-    │                           │
-    └───────────►(+)◄───────────┘
-                  │
-                  ▼
-               output
-`}</pre>
+      <Mermaid chart={`graph TD
+  IN["Input -- mic / file"] -->|"x gain"| PLUS["(+) mix"]
+  FB_OUT -->|"x feedback"| PLUS
+  PLUS --> WRITE["Write to buffer"]
+  WRITE --> READ["Read at delayTime"]
+  READ --> FB_OUT["tapOut -- feedback path"]
+  READ -->|"x dryWet"| WET["Wet signal"]
+  IN -->|"x 1 - dryWet"| DRY["Dry signal"]
+  DRY --> MIX["(+) output mix"]
+  WET --> MIX
+  MIX --> OUT["Output"]
+`} />
 
       <div className="source-bar">
         <span className="source-label">Source</span>

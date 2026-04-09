@@ -2,25 +2,25 @@ import Head from "next/head";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 
-const ElasticTrainDelay = dynamic(
+const SandySyrupDelay = dynamic(
   () =>
-    import("@/components/experiments/ElasticTrainDelay").then(
-      (m) => m.ElasticTrainDelay
+    import("@/components/experiments/SandySyrupDelay").then(
+      (m) => m.SandySyrupDelay
     ),
   { ssr: false }
 );
 
-export default function ElasticTrainDelayPage() {
+export default function SandySyrupDelayPage() {
   return (
     <>
       <Head>
-        <title>Elastic Train Delay — MORPHISMA</title>
+        <title>Sandy Syrup Delay — MORPHISMA</title>
       </Head>
       <div className="page-narrow">
         <Link href="/" className="back-link">
           ← morphisma
         </Link>
-        <ElasticTrainDelay />
+        <SandySyrupDelay />
       </div>
     </>
   );

@@ -3,7 +3,9 @@ import Link from "next/link";
 
 const CANDY_BG = `repeating-linear-gradient(45deg, rgba(220,60,80,0.12) 0px, rgba(220,60,80,0.12) 10px, rgba(255,255,255,0.07) 10px, rgba(255,255,255,0.07) 20px, rgba(200,255,0,0.1) 20px, rgba(200,255,0,0.1) 24px, rgba(230,80,160,0.12) 24px, rgba(230,80,160,0.12) 34px, rgba(140,50,160,0.12) 34px, rgba(140,50,160,0.12) 44px)`;
 
-const ELASTIC_BG = `repeating-linear-gradient(-45deg, rgba(80,170,220,0.12) 0px, rgba(80,170,220,0.12) 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px, rgba(255,50,120,0.12) 20px, rgba(255,50,120,0.12) 24px, rgba(50,180,120,0.12) 24px, rgba(50,180,120,0.12) 34px, rgba(60,40,140,0.12) 34px, rgba(60,40,140,0.12) 44px)`;
+const SLUDGE_BG = `repeating-linear-gradient(-45deg, rgba(80,100,40,0.12) 0px, rgba(80,100,40,0.12) 10px, rgba(20,15,10,0.1) 10px, rgba(20,15,10,0.1) 20px, rgba(160,120,40,0.12) 20px, rgba(160,120,40,0.12) 24px, rgba(60,80,50,0.1) 24px, rgba(60,80,50,0.1) 34px, rgba(90,60,30,0.12) 34px, rgba(90,60,30,0.12) 44px)`;
+
+const SANDY_BG = `repeating-linear-gradient(45deg, rgba(40,180,130,0.12) 0px, rgba(40,180,130,0.12) 10px, rgba(20,10,40,0.1) 10px, rgba(20,10,40,0.1) 20px, rgba(0,220,200,0.12) 20px, rgba(0,220,200,0.12) 24px, rgba(110,60,180,0.1) 24px, rgba(110,60,180,0.1) 34px, rgba(30,140,130,0.12) 34px, rgba(30,140,130,0.12) 44px)`;
 
 const EXPERIMENTS = [
   {
@@ -47,12 +49,20 @@ const EXPERIMENTS = [
     background: CANDY_BG,
   },
   {
-    href: "/elastic-train-delay",
-    title: "Elastic Train Delay",
+    href: "/striped-sludge-delay",
+    title: "Striped Sludge Delay",
     description:
-      "Voices sweep an exponential arc through a deep buffer — starting seconds behind the record head and accelerating toward the present, creating an endless Shepard pitch illusion.",
+      "Candy Coil variant with a centered delay hump — voices sweep below and above the original pitch, creating a true Shepard spiral through the source frequency.",
     tag: "effect",
-    background: ELASTIC_BG,
+    background: SLUDGE_BG,
+  },
+  {
+    href: "/sandy-syrup-delay",
+    title: "Sandy Syrup Delay",
+    description:
+      "Overlap-add granular pitch-shifting delay — each grain locks a playback rate from slow to fast, with a Grit↔Syrup blend for texture control.",
+    tag: "effect",
+    background: SANDY_BG,
   },
 ];
 

@@ -1,51 +1,59 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { el, type NodeRepr_t } from "@elemaudio/core";
 import {
-  elasticTrainDelayGraph,
+  stripedSludgeDelayGraph,
   MAX_VOICES,
-  type ElasticTrainDelayParams,
-} from "@/synth/elastic-train-delay";
+  type StripedSludgeDelayParams,
+} from "@/synth/striped-sludge-delay";
 import * as engine from "@/audio/delay-engine";
 import { Oscilloscope } from "@/components/Oscilloscope";
 import { Slider } from "@/components/Slider";
+import { Mermaid } from "@/components/Mermaid";
 
 type Source = "mic" | "file";
 
 const STRIPES = [
-  { color: "rgba(80,170,220,0.4)",   width: 44 },
-  { color: "rgba(0,0,0,0.35)",       width: 44 },
-  { color: "rgba(255,50,120,0.4)",   width: 12 },
-  { color: "rgba(50,180,120,0.4)",   width: 44 },
-  { color: "rgba(60,40,140,0.4)",    width: 44 },
+  { color: "rgba(80,100,40,0.4)",    width: 44 },
+  { color: "rgba(20,15,10,0.35)",    width: 44 },
+  { color: "rgba(160,120,40,0.4)",   width: 12 },
+  { color: "rgba(60,80,50,0.35)",    width: 44 },
+  { color: "rgba(90,60,30,0.4)",     width: 44 },
 ];
 const CANVAS = 3000;
-const TAPER = 0.85;
+const SINE_AMP = 14;
+const SINE_PERIOD = 260;
+const PATH_STEPS = 80;
+
+function sineStripePath(topY: number, height: number): string {
+  const botY = topY + height;
+  let d = "";
+  for (let s = 0; s <= PATH_STEPS; s++) {
+    const x = (s / PATH_STEPS) * CANVAS;
+    const y = topY + SINE_AMP * Math.sin((2 * Math.PI * x) / SINE_PERIOD);
+    d += s === 0 ? `M${x},${y}` : `L${x},${y}`;
+  }
+  for (let s = PATH_STEPS; s >= 0; s--) {
+    const x = (s / PATH_STEPS) * CANVAS;
+    const y = botY + SINE_AMP * Math.sin((2 * Math.PI * x) / SINE_PERIOD);
+    d += `L${x},${y}`;
+  }
+  return d + "Z";
+}
 
 const STRIPE_PATHS: { d: string; fill: string }[] = [];
 {
-  let yL = 0;
-  let yR = 0;
-  let idx = 0;
-  while (yL < CANVAS || yR < CANVAS) {
-    const s = STRIPES[idx % STRIPES.length];
-    const wider = s.width * (1 + TAPER);
-    const narrower = s.width * (1 - TAPER);
-    const hL = idx % 2 === 0 ? wider : narrower;
-    const hR = idx % 2 === 0 ? narrower : wider;
-    const topL = yL, botL = yL + hL;
-    const topR = yR, botR = yR + hR;
-    STRIPE_PATHS.push({
-      d: `M0,${topL} L${CANVAS},${topR} L${CANVAS},${botR} L0,${botL} Z`,
-      fill: s.color,
-    });
-    yL = botL;
-    yR = botR;
-    idx++;
+  let y = 0;
+  while (y < CANVAS) {
+    for (const { color, width } of STRIPES) {
+      if (y >= CANVAS) break;
+      STRIPE_PATHS.push({ d: sineStripePath(y, width), fill: color });
+      y += width;
+    }
   }
 }
 
 const SPEED_LIMIT = 5;
-const RANGE_MIN = 0.5;
+const RANGE_MIN = 0.1;
 const RANGE_MAX = 10;
 
 interface Preset {
@@ -58,68 +66,54 @@ interface Preset {
   feedback: number;
   fbDelay: number;
   dryWet: number;
-  grainSize: number;
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  // Classic Shepard illusion — steady tone in, endless rise out
-  { name: "Classic Rise",      speed: 0.08,  range: 4.0,  directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.05 },
-  // Mirror image — same shape, falling
-  { name: "Classic Fall",      speed: 0.08,  range: 4.0,  directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 4.0,   dryWet: 0.85, grainSize: 0.05 },
-  // Very slow, very deep buffer — glacial pitch drift
-  { name: "Glacial Drift",     speed: 0.015, range: 8.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.75, fbDelay: 12.0,  dryWet: 1.0,  grainSize: 0.04 },
-  // Tight interval, fast cycle — metallic shimmer
-  { name: "Metal Shimmer",     speed: 0.6,   range: 1.0,  directionUp: true,  numVoices: 6,  tilt: 0.7,   feedback: 0.5,  fbDelay: 1.5,   dryWet: 0.7,  grainSize: 0.01 },
-  // 2 voices, heavy feedback, harsh robotic texture
-  { name: "Robot Grind",       speed: 1.2,   range: 1.0,  directionUp: false, numVoices: 2,  tilt: -0.6,  feedback: 0.93, fbDelay: 2.0,   dryWet: 1.0,  grainSize: 0.015 },
-  // Big grain size — chunky, granular texture
-  { name: "Grain Cloud",       speed: 0.1,   range: 3.0,  directionUp: true,  numVoices: 10, tilt: -0.3,  feedback: 0.3,  fbDelay: 5.0,   dryWet: 0.9,  grainSize: 0.3  },
-  // Tiny grain size — smooth, nearly continuous pitch shift
-  { name: "Silk Glide",        speed: 0.05,  range: 6.0,  directionUp: false, numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 6.0,   dryWet: 0.8,  grainSize: 0.008 },
-  // Asymmetric tilt — voices pile up at the beginning of the sweep
-  { name: "Slow Start",        speed: 0.06,  range: 5.0,  directionUp: true,  numVoices: 8,  tilt: -0.8,  feedback: 0.4,  fbDelay: 6.0,   dryWet: 0.9,  grainSize: 0.04 },
-  // Opposite tilt — voices cluster at the end, near the write head
-  { name: "Fast Finish",       speed: 0.06,  range: 5.0,  directionUp: true,  numVoices: 8,  tilt: 0.8,   feedback: 0.4,  fbDelay: 6.0,   dryWet: 0.9,  grainSize: 0.04 },
-  // High feedback, long buffer — self-reinforcing drone
-  { name: "Feedback Drone",    speed: 0.03,  range: 2.0,  directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.92, fbDelay: 8.0,   dryWet: 1.0,  grainSize: 0.06 },
-  // Full octave range, all voices, pure wet — maximum illusion
-  { name: "Full Spectrum",     speed: 0.04,  range: 10.0, directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 10.0,  dryWet: 1.0,  grainSize: 0.03 },
-  // Mixed dry/wet with moderate settings — subtle effect
-  { name: "Gentle Blend",      speed: 0.12,  range: 2.0,  directionUp: false, numVoices: 6,  tilt: 0.2,   feedback: 0.2,  fbDelay: 3.0,   dryWet: 0.4,  grainSize: 0.06 },
+  { name: "Centered Rise",   speed: 0.5,   range: 2.0,   directionUp: true,  numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 1.0,   dryWet: 0.8 },
+  { name: "Centered Fall",   speed: 0.5,   range: 2.0,   directionUp: false, numVoices: 8,  tilt: 0,     feedback: 0.0,  fbDelay: 1.0,   dryWet: 0.8 },
+  { name: "Slow Sludge",     speed: 0.1,   range: 4.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.7,  fbDelay: 3.0,   dryWet: 0.9 },
+  { name: "Thick Tar",       speed: 0.08,  range: 6.0,   directionUp: false, numVoices: 12, tilt: -0.3,  feedback: 0.85, fbDelay: 4.0,   dryWet: 1.0 },
+  { name: "Quick Stripe",    speed: 2.0,   range: 0.5,   directionUp: true,  numVoices: 4,  tilt: 0.5,   feedback: 0.4,  fbDelay: 0.5,   dryWet: 0.6 },
+  { name: "Mud Churn",       speed: 0.3,   range: 3.0,   directionUp: false, numVoices: 10, tilt: 0.4,   feedback: 0.8,  fbDelay: 2.0,   dryWet: 0.85 },
+  { name: "Dual Grind",      speed: 1.3,   range: 0.1,   directionUp: false, numVoices: 2,  tilt: -0.5,  feedback: 0.95, fbDelay: 0.01,  dryWet: 1.0 },
+  { name: "Wide Sweep",      speed: 0.15,  range: 5.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.0,  fbDelay: 2.0,   dryWet: 0.85 },
+  { name: "Frozen Bog",      speed: 0.02,  range: 8.0,   directionUp: true,  numVoices: 12, tilt: 0,     feedback: 0.9,  fbDelay: 5.0,   dryWet: 1.0 },
+  { name: "Tight Wobble",    speed: 1.5,   range: 0.3,   directionUp: true,  numVoices: 6,  tilt: -0.4,  feedback: 0.5,  fbDelay: 0.2,   dryWet: 0.55 },
+  { name: "Long Pour",       speed: 0.06,  range: 7.0,   directionUp: false, numVoices: 12, tilt: 0.2,   feedback: 0.75, fbDelay: 4.0,   dryWet: 0.95 },
+  { name: "Gentle Ooze",     speed: 0.2,   range: 1.5,   directionUp: true,  numVoices: 8,  tilt: 0.2,   feedback: 0.3,  fbDelay: 1.0,   dryWet: 0.5 },
 ];
 
-const ACCENT = "#50b8a0";
+const ACCENT = "#8ca030";
 
 function deriveParams(
   speed: number,
   range: number,
   directionUp: boolean,
-  rest: Omit<ElasticTrainDelayParams, "speed" | "range" | "directionUp">
-): ElasticTrainDelayParams {
+  rest: Omit<StripedSludgeDelayParams, "speed" | "range" | "directionUp">
+): StripedSludgeDelayParams {
   return { ...rest, speed, range, directionUp };
 }
 
-export function ElasticTrainDelay() {
+export function StripedSludgeDelay() {
   const [playing, setPlaying] = useState(false);
   const [outputVol, setOutputVol] = useState(0.5);
   const [source, setSource] = useState<Source>("file");
   const [fileUrl, setFileUrl] = useState("");
 
-  const [speed, setSpeed] = useState(0.05);
-  const [range, setRange] = useState(4.0);
+  const [speed, setSpeed] = useState(0.5);
+  const [range, setRange] = useState(2.0);
   const [dirUp, setDirUp] = useState(true);
   const [numVoices, setNumVoices] = useState(8);
   const [tilt, setTilt] = useState(0);
   const [feedback, setFeedback] = useState(0.0);
-  const [fbDelay, setFbDelay] = useState(4.0);
+  const [fbDelay, setFbDelay] = useState(1.0);
   const [dryWet, setDryWet] = useState(0.8);
   const [inputGain, setInputGain] = useState(1.0);
-  const [grainSize, setGrainSize] = useState(0.05);
 
   const [scopeData, setScopeData] = useState<Float32Array | number[]>([]);
   const [customPresets, setCustomPresets] = useState<Preset[]>(() => {
     try {
-      const stored = localStorage.getItem("elastic-train-presets");
+      const stored = localStorage.getItem("striped-sludge-presets");
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   });
@@ -131,7 +125,8 @@ export function ElasticTrainDelay() {
   const sourceConnectedRef = useRef(false);
   playingRef.current = playing;
 
-  const semitones = Math.round(range * 12);
+  const pitchProduct = speed * range * Math.PI;
+  const semitones = Math.round(12 * Math.log2(Math.max(1 + pitchProduct, 0.01)));
 
   const params = deriveParams(speed, range, dirUp, {
     numVoices,
@@ -140,7 +135,6 @@ export function ElasticTrainDelay() {
     fbDelay,
     dryWet,
     inputGain,
-    grainSize,
   });
 
   useEffect(() => {
@@ -156,7 +150,7 @@ export function ElasticTrainDelay() {
   const buildAndRender = useCallback(() => {
     if (!playing) return;
     const sr = engine.getSampleRate();
-    const graph = elasticTrainDelayGraph(params, sr);
+    const graph = stripedSludgeDelayGraph(params, sr);
     const gained = el.mul(
       graph,
       el.sm(el.const({ key: "output-vol", value: outputVol }))
@@ -231,14 +225,6 @@ export function ElasticTrainDelay() {
     }
   }, [fileUrl]);
 
-  const handleSpeed = (newSpeed: number) => {
-    setSpeed(newSpeed);
-  };
-
-  const handleRange = (newRange: number) => {
-    setRange(newRange);
-  };
-
   const applyPreset = (p: Preset) => {
     setSpeed(p.speed);
     setRange(p.range);
@@ -248,7 +234,6 @@ export function ElasticTrainDelay() {
     setFeedback(p.feedback);
     setFbDelay(p.fbDelay);
     setDryWet(p.dryWet);
-    setGrainSize(p.grainSize);
   };
 
   const startSaving = () => {
@@ -258,8 +243,8 @@ export function ElasticTrainDelay() {
   };
 
   useEffect(() => {
-    try { localStorage.setItem("elastic-train-presets", JSON.stringify(customPresets)); }
-    catch { /* storage full or unavailable */ }
+    try { localStorage.setItem("striped-sludge-presets", JSON.stringify(customPresets)); }
+    catch {}
   }, [customPresets]);
 
   const savePreset = () => {
@@ -267,7 +252,7 @@ export function ElasticTrainDelay() {
     if (!name) return;
     setCustomPresets((prev) => [
       ...prev,
-      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet, grainSize },
+      { name, speed, range, directionUp: dirUp, numVoices, tilt, feedback, fbDelay, dryWet },
     ]);
     setSavingPreset(false);
     setPresetName("");
@@ -280,13 +265,13 @@ export function ElasticTrainDelay() {
   const allPresets = [...BUILT_IN_PRESETS, ...customPresets];
 
   return (
-    <div className="risset-coil-page">
+    <div className="sludge-page">
       <style>{`
-        .risset-coil-page input[type="range"]::-webkit-slider-thumb { background: ${ACCENT} !important; }
-        .risset-coil-page input[type="range"]::-moz-range-thumb { background: ${ACCENT} !important; }
-        .risset-coil-page .play-btn { border-color: ${ACCENT} !important; color: ${ACCENT} !important; }
-        .risset-coil-page .play-btn:hover { background: ${ACCENT} !important; color: #0a0a0a !important; }
-        .risset-coil-page .source-btn.active { background: ${ACCENT} !important; border-color: ${ACCENT} !important; }
+        .sludge-page input[type="range"]::-webkit-slider-thumb { background: ${ACCENT} !important; }
+        .sludge-page input[type="range"]::-moz-range-thumb { background: ${ACCENT} !important; }
+        .sludge-page .play-btn { border-color: ${ACCENT} !important; color: ${ACCENT} !important; }
+        .sludge-page .play-btn:hover { background: ${ACCENT} !important; color: #0a0a0a !important; }
+        .sludge-page .source-btn.active { background: ${ACCENT} !important; border-color: ${ACCENT} !important; }
       `}</style>
       <svg
         viewBox={`0 0 ${CANVAS} ${CANVAS}`}
@@ -307,15 +292,13 @@ export function ElasticTrainDelay() {
         ))}
       </svg>
       <h1 className="site-title" style={{ color: ACCENT }}>
-        Elastic Train Delay
+        Striped Sludge Delay
       </h1>
       <p style={{ opacity: 0.7, marginTop: "-0.5rem", marginBottom: "1.5rem" }}>
-        {numVoices} voices sweep an exponential arc through a deep circular
-        buffer — starting at the silent feedback head ({fbDelay.toFixed(1)}s
-        behind the record head) and accelerating toward the present. Two-level
-        Hann windowing keeps each grain smooth while the sweep fades in and out
-        across the full journey. The result: an endlessly {dirUp ? "rising" : "falling"} pitch
-        illusion stretched across seconds of buffered audio.
+        Like Candy Coil, but the delay curve is a centered hump — voices start
+        below the original pitch, cross through it at their loudest, and fade
+        out above. The Shepard illusion sweeps both directions through the
+        original frequency. {dirUp ? "Rising" : "Falling"} with ±{semitones} st range.
       </p>
 
       <div className="source-bar">
@@ -366,7 +349,7 @@ export function ElasticTrainDelay() {
             <button
               className="preset-btn"
               onClick={() => applyPreset(p)}
-              title={`${p.speed} Hz / ${p.range} oct / ${p.numVoices}v / ${p.grainSize}s grain`}
+              title={`${p.speed} Hz / ${p.range}s / ${p.numVoices}v`}
             >
               {p.name}
             </button>
@@ -455,16 +438,6 @@ export function ElasticTrainDelay() {
           onChange={setNumVoices}
         />
         <Slider
-          label="Grain Size"
-          value={grainSize}
-          min={0.005}
-          max={0.5}
-          step={0.001}
-          unit="s"
-          curve={2}
-          onChange={setGrainSize}
-        />
-        <Slider
           label="Speed"
           value={speed}
           min={0}
@@ -472,7 +445,7 @@ export function ElasticTrainDelay() {
           step={0.001}
           unit="Hz"
           curve={2}
-          onChange={handleSpeed}
+          onChange={setSpeed}
         />
         <div
           style={{
@@ -494,20 +467,19 @@ export function ElasticTrainDelay() {
             {dirUp ? "Up" : "Down"}
           </label>
           <span style={{ marginLeft: "auto", color: "#999", fontVariantNumeric: "tabular-nums" }}>
-            ±{(range / 2).toFixed(1)} oct / {semitones > 0 ? "+" : ""}{semitones} st
+            ±{semitones} st
           </span>
         </div>
         <Slider
-          label="Octaves"
+          label="Range"
           value={range}
           min={RANGE_MIN}
           max={RANGE_MAX}
-          step={0.1}
-          unit="oct"
-          curve={1}
-          onChange={handleRange}
+          step={0.001}
+          unit="s"
+          curve={3}
+          onChange={setRange}
         />
-
         <Slider
           label="Tilt"
           value={tilt}
@@ -516,7 +488,6 @@ export function ElasticTrainDelay() {
           step={0.01}
           onChange={setTilt}
         />
-
         <Slider
           label="Feedback"
           value={feedback}
@@ -528,9 +499,9 @@ export function ElasticTrainDelay() {
         <Slider
           label="FB Delay"
           value={fbDelay}
-          min={0.1}
-          max={15}
-          step={0.01}
+          min={0.001}
+          max={5}
+          step={0.001}
           unit="s"
           curve={2}
           onChange={setFbDelay}
@@ -545,56 +516,32 @@ export function ElasticTrainDelay() {
         />
       </div>
 
-      <pre style={{
-        fontSize: "0.6rem",
-        lineHeight: 1.4,
-        color: "#888",
-        background: "#111",
-        padding: "0.75rem",
-        borderRadius: "6px",
-        overflow: "auto",
-        marginTop: "1.5rem",
-      }}>{`
-  input (mic / file)
-    │
-    ▼
-   (+)◄──────────── fb read output × feedback
-    │                        ▲
-    ▼                        │
-  [write to buffer] ··· [fb read at fbDelay behind write]
-    │                   (not sent to output)
-    │
-    │   ┌──────── buffer (fbDelay → write head) ────────┐
-    │   │                                               │
-    │   │  fb head                          write head  │
-    │   │  (start)                             (end)    │
-    │   │    │                                  │       │
-    │   │    ├─[grain]─[grain]─[grain]─ ··· ─[grain]    │
-    │   │    │  slow      ──────────►      fast  │      │
-    │   │    │  (continuous sweep, grain-windowed)│      │
-    │   │    │                                   │      │
-    │   │    │◄──── sweep Hann (fade in/out) ───►│      │
-    │   │    │  × grain Hann (per-chunk window)  │      │
-    │   └────┴───────────────────────────────────┘      │
-    │                                                   │
-    ├─── [voice 0: grains fb→write, 2-level Hann] ──┐  │
-    ├─── [voice 1: grains fb→write, 2-level Hann] ──┤  │
-    ├─── ...                                         ├──► wet
-    └─── [voice N: grains fb→write, 2-level Hann] ──┘
-                                                    │
-                                          wet × dryWet
-                                                    │
-    input × (1 - dryWet) ──────────────►(+)◄────────┘
-                                         │
-                                         ▼
-                                       output
+      <Mermaid chart={`graph TD
+  IN["Input -- mic / file"] -->|"x gain"| PLUS["(+) mix"]
+  FB_RD -->|"x feedback"| PLUS
+  PLUS --> WRITE["Write to buffer"]
+  WRITE --> FB_RD["fbHead: read at fbDelay -- SILENT"]
+  FB_RD -->|"x 0 -- not heard"| SINK["fbSink"]
+  WRITE --> V0["Voice 0: centered hump delay"]
+  WRITE --> V1["Voice 1: centered hump delay"]
+  WRITE --> VN["Voice N: centered hump delay"]
+  V0 -->|"x Hann window"| SUM["Sum all voices"]
+  V1 -->|"x Hann window"| SUM
+  VN -->|"x Hann window"| SUM
+  SUM -->|"x dryWet"| WET["Wet signal"]
+  IN -->|"x 1 - dryWet"| DRY["Dry signal"]
+  DRY --> OUT_MIX["(+) output"]
+  WET --> OUT_MIX
+  OUT_MIX --> OUT["Output"]
 
-  Two-level windowing (continuous sweep):
-  • Grain Hann — small repeating window (grainSize), smooths the sweep
-  • Sweep Hann — large fade-in at fb head, fade-out at write head
-  Pitch illusion from voices continuously accelerating toward the write head.
-  Exponential curve: each equal step in phasor-space = equal octave step in pitch.
-`}</pre>
+  subgraph "Centered Hump Delay -- dirUp"
+    direction LR
+    A["p=0: delay=0"] --> B["p=0.5: delay=range -- peak"]
+    B --> C["p=1: delay=0"]
+    D["pitch BELOW original"] --> E["original pitch -- loudest"]
+    E --> F["pitch ABOVE original"]
+  end
+`} />
     </div>
   );
 }
