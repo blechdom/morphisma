@@ -11,6 +11,10 @@ const SANDY_BG = `repeating-linear-gradient(45deg, rgba(40,180,130,0.3) 0px, rgb
 
 const BIPOLAR_BG = `repeating-linear-gradient(-45deg, rgba(80,20,140,0.3) 0px, rgba(80,20,140,0.3) 10px, rgba(15,10,25,0.25) 10px, rgba(15,10,25,0.25) 20px, rgba(255,50,200,0.3) 20px, rgba(255,50,200,0.3) 24px, rgba(60,20,100,0.25) 24px, rgba(60,20,100,0.25) 34px, rgba(120,40,180,0.3) 34px, rgba(120,40,180,0.3) 44px)`;
 
+const MARSHMALLOW_BG = `repeating-linear-gradient(45deg, rgba(255,180,210,0.3) 0px, rgba(255,180,210,0.3) 10px, rgba(200,170,255,0.2) 10px, rgba(200,170,255,0.2) 20px, rgba(255,255,255,0.25) 20px, rgba(255,255,255,0.25) 24px, rgba(170,230,200,0.2) 24px, rgba(170,230,200,0.2) 34px, rgba(240,160,190,0.3) 34px, rgba(240,160,190,0.3) 44px)`;
+
+const SLIPPERY_BG = `repeating-linear-gradient(135deg, rgba(48,204,170,0.3) 0px, rgba(48,204,170,0.3) 8px, rgba(20,60,50,0.25) 8px, rgba(20,60,50,0.25) 16px, rgba(100,255,200,0.2) 16px, rgba(100,255,200,0.2) 20px, rgba(30,120,100,0.3) 20px, rgba(30,120,100,0.3) 28px, rgba(60,200,160,0.25) 28px, rgba(60,200,160,0.25) 36px)`;
+
 const EXPERIMENTS = [
   {
     href: "/glissando",
@@ -56,6 +60,24 @@ const EXPERIMENTS = [
     tag: "effect",
     background: BIPOLAR_BG,
     titleColor: "#cc88dd",
+  },
+  {
+    href: "/slippery-spectrum",
+    title: "Slippery Spectrum",
+    description:
+      "WORK-IN-PROGRESS — FFT analysis splits the input into frequency bands — each band resynthesized as a Shepard-Risset glissando, creating an endlessly rising or falling spectral ghost of the original signal.",
+    tag: "effect",
+    background: SLIPPERY_BG,
+    titleColor: "#30ccaa",
+  },
+  {
+    href: "/marshmallow-medicine",
+    title: "Marshmallow Medicine",
+    description:
+      "WORK-IN-PROGRESS — A laboratory for Shepard / Risset LFOs: modulation signals that appear to rise or fall forever. Five strategies for infinite FM, PM, and AM.",
+    tag: "synthesis",
+    background: MARSHMALLOW_BG,
+    titleColor: "#dd88cc",
   },
 ];
 

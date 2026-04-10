@@ -62,3 +62,7 @@ export function suspend() {
 export function resume() {
   ctx?.resume();
 }
+
+export function getSampleRate(): number {
+  return ctx?.sampleRate ?? 48000;
+}

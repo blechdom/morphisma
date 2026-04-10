@@ -6,7 +6,7 @@ export type AnchorMode = "fixed" | "tracking";
 export interface BipolarBreakdownDelayParams {
   direction: Direction;
   anchorMode: AnchorMode;
-  overlap: number;
+  numVoices: number;
   fullSweep: boolean;
   speed: number;
   startDelay: number;
@@ -23,7 +23,7 @@ export interface BipolarBreakdownDelayParams {
 }
 
 const MAX_BUFFER_SECONDS = 30;
-const MAX_OVERLAP = 8;
+const MAX_VOICES = 12;
 
 function elMax(a: NodeRepr_t, b: NodeRepr_t): NodeRepr_t {
   return el.mul(0.5, el.add(el.add(a, b), el.abs(el.sub(a, b)))) as NodeRepr_t;
@@ -45,7 +45,7 @@ export function bipolarBreakdownDelayGraph(
   sampleRate: number
 ): NodeRepr_t {
   const {
-    direction, anchorMode, overlap, fullSweep,
+    direction, anchorMode, numVoices, fullSweep,
     speed, startDelay, minDelay, initRate, accel, maxPasses,
     feedback, fbDelay, globalFeedback, dryWet, inputGain, resetCount,
   } = params;
@@ -54,7 +54,7 @@ export function bipolarBreakdownDelayGraph(
   const fbDelaySamples = Math.max(1, Math.round(fbDelay * sampleRate));
   const safeSpeed = Math.max(0.001, speed);
   const safeMaxPasses = Math.max(1, Math.round(maxPasses));
-  const safeOverlap = Math.max(1, Math.min(MAX_OVERLAP, Math.round(overlap)));
+  const safeNumVoices = Math.max(1, Math.min(MAX_VOICES, Math.round(numVoices)));
 
   const rawInput = el.in({ channel: 0 }) as NodeRepr_t;
   const input = el.mul(
@@ -66,11 +66,14 @@ export function bipolarBreakdownDelayGraph(
   const smoothGlobalFb = el.sm(el.const({ key: "bbd-gfb", value: globalFeedback }));
   const fbSignal = el.tapIn({ name: "bbd-fb" }) as NodeRepr_t;
   const globalFbSignal = el.tapIn({ name: "bbd-gfb-tap" }) as NodeRepr_t;
-  const toBuffer = el.add(
+
+  // Soft-clip the buffer input with tanh to prevent feedback runaway
+  const bufferSum = el.add(
     input,
     el.mul(fbSignal, smoothFeedback),
     el.mul(globalFbSignal, smoothGlobalFb)
   ) as NodeRepr_t;
+  const toBuffer = el.tanh(bufferSum) as NodeRepr_t;
 
   const fbHead = el.delay(
     { size: maxBufferSamples },
@@ -82,8 +85,7 @@ export function bipolarBreakdownDelayGraph(
   const fbSink = el.mul(fbTapped, 0) as NodeRepr_t;
 
   // Elapsed time: 0 → MAX_BUFFER_SECONDS.
-  // Keyed on resetCount so incrementing it spawns a fresh phasor at 0,
-  // which resets the anchor position (x).
+  // Keyed on resetCount so incrementing it spawns a fresh phasor at 0.
   const elapsed = el.mul(
     el.phasor(el.const({ key: `bbd-elapsed-freq-${resetCount}`, value: 1 / MAX_BUFFER_SECONDS })),
     MAX_BUFFER_SECONDS
@@ -98,35 +100,24 @@ export function bipolarBreakdownDelayGraph(
   const cyclePhase = el.sub(cycleTotal, el.floor(cycleTotal));
   const passIndex = el.floor(el.mul(cyclePhase, safeMaxPasses));
 
-  // --- Rate (for rate-controlled mode) ---
+  // --- Rate (for rate-controlled mode, accel can be negative) ---
   const smoothInitRate = el.sm(el.const({ key: "bbd-init-rate", value: initRate }));
   const smoothAccel = el.sm(el.const({ key: "bbd-accel", value: accel }));
   const currentRate = el.add(smoothInitRate, el.mul(passIndex, smoothAccel));
 
-  // --- Extent (distance between anchor x and record head) ---
+  // --- Shared signals ---
   const smoothSD = el.sm(el.const({ key: "bbd-sd", value: startDelay }));
   const smoothMinDel = el.sm(el.const({ key: "bbd-min-del-sec", value: minDelay }));
   const isFixedVal = anchorMode === "fixed" ? 1.0 : 0.0;
   const smoothFixed = el.sm(el.const({ key: "bbd-fixed", value: isFixedVal }));
-  // Fixed: extent = startDelay + elapsed_in_cycle
-  const extentFixed = el.add(smoothSD, el.mul(cyclePhase, safeMaxPasses / safeSpeed));
-  // Tracking: extent = startDelay (constant)
-  const extent = el.add(
-    el.mul(smoothFixed, extentFixed),
-    el.mul(el.sub(1.0, smoothFixed), smoothSD)
-  );
 
-  // --- Sweep range: from extent down to minDelay (not all the way to 0) ---
   const zero = el.const({ key: "bbd-zero", value: 0 }) as NodeRepr_t;
-  const fullSweepRange = elMax(zero, el.sub(extent, smoothMinDel));
+  const one = el.const({ key: "bbd-one", value: 1 }) as NodeRepr_t;
   const passDur = el.sm(el.const({ key: "bbd-pas-dur", value: 1 / safeSpeed }));
   const rateSweepRange = elMax(zero, el.mul(el.sub(currentRate, 1.0), passDur));
+
   const isFullVal = fullSweep ? 1.0 : 0.0;
   const smoothFull = el.sm(el.const({ key: "bbd-full-sweep", value: isFullVal }));
-  const sweepRange = el.add(
-    el.mul(smoothFull, fullSweepRange),
-    el.mul(el.sub(1.0, smoothFull), rateSweepRange)
-  );
 
   // --- Direction weights ---
   const isFwd = direction === "forward" ? 1.0 : 0.0;
@@ -136,25 +127,48 @@ export function bipolarBreakdownDelayGraph(
   const smoothDirBwd = el.sm(el.const({ key: "dir-bwd", value: isBwd }));
   const smoothDirBoom = el.sm(el.const({ key: "dir-boom", value: isBoom }));
 
-  const voiceGain = 2 / safeOverlap;
-  const clampMin = el.const({ key: "bbd-clamp-min", value: 1 }) as NodeRepr_t;
+  const voiceGain = 2 / MAX_VOICES;
+  // Minimum 64 samples (~1.3ms at 48kHz) to avoid comb-filter bombs with feedback
+  const clampMin = el.const({ key: "bbd-clamp-min", value: 64 }) as NodeRepr_t;
   const clampMax = el.const({ key: "bbd-clamp-max", value: maxBufferSamples - 1 }) as NodeRepr_t;
 
-  function voice(index: number): NodeRepr_t {
-    const phaseOffset = index / safeOverlap;
-    const rawPhase = el.add(
-      passPhaseBase,
-      el.const({ key: `bbd-ph-${index}`, value: phaseOffset })
-    );
-    const p = el.sub(rawPhase, el.floor(rawPhase));
+  const cycleDurSec = safeMaxPasses / safeSpeed;
 
-    // Forward: p sweeps 0→1 (far→near)
-    // Backward: 1−p (near→far)
-    // Boomerang: 1−|1−2p| (far→near→far)
+  // ALWAYS create MAX_VOICES nodes so the graph topology never changes.
+  // Voices beyond safeNumVoices get alive=0 (silent but present in the graph).
+  function voice(index: number): NodeRepr_t {
+    const isActive = index < safeNumVoices;
+    const birthPhase = isActive ? index / safeNumVoices : 1.0;
+    const birthConst = el.const({ key: `bbd-birth-${index}`, value: birthPhase });
+
+    const rawAge = el.sub(cyclePhase, birthConst);
+    const age = elMax(zero, rawAge);
+
+    // Active voices get a quick fade-in; inactive voices stay at 0
+    const activeGate = el.sm(el.const({ key: `bbd-active-${index}`, value: isActive ? 1.0 : 0.0 }));
+    const aliveRamp = elMin(one, el.mul(age, safeNumVoices * 20));
+    const alive = el.mul(aliveRamp, activeGate);
+
+    // This voice's extent: its own anchor was set at birth
+    const voiceExtentFixed = el.add(smoothSD, el.mul(age, cycleDurSec));
+    const voiceExtent = el.add(
+      el.mul(smoothFixed, voiceExtentFixed),
+      el.mul(el.sub(1.0, smoothFixed), smoothSD)
+    );
+
+    const voiceFullRange = elMax(zero, el.sub(voiceExtent, smoothMinDel));
+    const voiceSweepRange = el.add(
+      el.mul(smoothFull, voiceFullRange),
+      el.mul(el.sub(1.0, smoothFull), rateSweepRange)
+    );
+
+    const p = passPhaseBase;
+
     const fwdP = p;
     const bwdP = el.sub(1.0, p);
-    const boomP = el.sub(1.0, el.abs(el.sub(1.0, el.mul(2.0, p))));
-
+    // Sinusoidal boomerang: 0.5 - 0.5*cos(2πp)
+    // Decelerates at far end, snaps back — elastic paddle-ball feel
+    const boomP = el.mul(0.5, el.sub(1.0, el.cos(el.mul(2 * Math.PI, p))));
     const sweepPhase = el.add(
       el.mul(smoothDirFwd, fwdP),
       el.add(
@@ -163,10 +177,7 @@ export function bipolarBreakdownDelayGraph(
       )
     );
 
-    // delay = extent − sweepRange × sweepPhase
-    // At sweepPhase=0: delay = extent (at anchor x)
-    // At sweepPhase=1: delay = extent − sweepRange = minDelay (near record head)
-    const delaySec = el.sub(extent, el.mul(sweepRange, sweepPhase));
+    const delaySec = el.sub(voiceExtent, el.mul(voiceSweepRange, sweepPhase));
     const delaySamples = el.mul(delaySec, sampleRate);
     const clamped = elMin(clampMax, elMax(clampMin, delaySamples));
 
@@ -177,23 +188,18 @@ export function bipolarBreakdownDelayGraph(
       toBuffer
     );
 
-    if (safeOverlap > 1) {
-      const hann = el.mul(0.5, el.sub(1.0, el.cos(el.mul(2 * Math.PI, p))));
-      return el.mul(head, hann, voiceGain) as NodeRepr_t;
-    }
-    return el.mul(head, voiceGain) as NodeRepr_t;
+    return el.mul(el.mul(head, alive), voiceGain) as NodeRepr_t;
   }
 
   const voices: NodeRepr_t[] = [];
-  for (let i = 0; i < safeOverlap; i++) {
+  for (let i = 0; i < MAX_VOICES; i++) {
     voices.push(voice(i));
   }
   const mixed = addMany(voices);
 
   // Cycle envelope for fixed mode: instant-on, fade out over last 10%
-  // of the cycle before the anchor resets. Tracking mode: flat 1.0.
   const fadeOut = elMin(
-    el.const({ key: "bbd-env-one", value: 1.0 }) as NodeRepr_t,
+    one,
     el.mul(el.sub(1.0, cyclePhase), 10.0)
   );
   const cycleEnv = el.add(
@@ -213,5 +219,6 @@ export function bipolarBreakdownDelayGraph(
     el.sm(el.const({ key: "bbd-wet", value: dryWet }))
   ) as NodeRepr_t;
 
-  return el.add(dry, wet, fbSink) as NodeRepr_t;
+  // Safety limiter on output to prevent speaker damage
+  return el.tanh(el.add(dry, wet, fbSink)) as NodeRepr_t;
 }

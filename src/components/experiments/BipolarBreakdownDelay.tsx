@@ -59,7 +59,7 @@ interface Preset {
   name: string;
   direction: Direction;
   anchorMode: AnchorMode;
-  overlap: number;
+  numVoices: number;
   fullSweep: boolean;
   speed: number;
   startDelay: number;
@@ -74,16 +74,18 @@ interface Preset {
 }
 
 const BUILT_IN_PRESETS: Preset[] = [
-  { name: "Concat Loop",       direction: "forward",   anchorMode: "fixed",    overlap: 1, fullSweep: true,  speed: 0.2,  startDelay: 3.0,  minDelay: 1.0, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
-  { name: "Forward Sweep",     direction: "forward",   anchorMode: "tracking", overlap: 1, fullSweep: true,  speed: 0.5,  startDelay: 2.0,  minDelay: 0.5, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
-  { name: "Backward Crawl",    direction: "backward",  anchorMode: "tracking", overlap: 1, fullSweep: true,  speed: 0.3,  startDelay: 3.0,  minDelay: 0.5, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
-  { name: "Boomerang",         direction: "boomerang", anchorMode: "tracking", overlap: 1, fullSweep: true,  speed: 0.4,  startDelay: 2.0,  minDelay: 0.5, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
-  { name: "Overlap Cascade",   direction: "forward",   anchorMode: "tracking", overlap: 4, fullSweep: true,  speed: 0.5,  startDelay: 2.0,  minDelay: 0.5, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
-  { name: "Fixed Accel",       direction: "forward",   anchorMode: "fixed",    overlap: 1, fullSweep: false, speed: 0.5,  startDelay: 2.0,  minDelay: 1.0, initRate: 0.5, accel: 0.15, maxPasses: 12, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
-  { name: "Reverse Layers",    direction: "backward",  anchorMode: "tracking", overlap: 6, fullSweep: true,  speed: 0.3,  startDelay: 3.0,  minDelay: 0.5, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0.3, fbDelay: 2.0,  globalFeedback: 0,   dryWet: 1.0  },
-  { name: "Ping Pong Blur",    direction: "boomerang", anchorMode: "tracking", overlap: 4, fullSweep: true,  speed: 0.6,  startDelay: 1.5,  minDelay: 0.5, initRate: 2.0, accel: 0,    maxPasses: 10, feedback: 0.4, fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
-  { name: "Deep Freeze",       direction: "forward",   anchorMode: "fixed",    overlap: 1, fullSweep: false, speed: 0.15, startDelay: 5.0,  minDelay: 1.0, initRate: 0.1, accel: 0.05, maxPasses: 20, feedback: 0.5, fbDelay: 3.0,  globalFeedback: 0,   dryWet: 1.0  },
-  { name: "Self-Feed Rise",    direction: "forward",   anchorMode: "fixed",    overlap: 2, fullSweep: false, speed: 0.4,  startDelay: 2.0,  minDelay: 1.0, initRate: 0.4, accel: 0.15, maxPasses: 12, feedback: 0.3, fbDelay: 1.5,  globalFeedback: 0.5, dryWet: 1.0  },
+  { name: "Paddle Ball",       direction: "boomerang", anchorMode: "fixed",    numVoices: 1,  fullSweep: true,  speed: 0.5,  startDelay: 1.5,  minDelay: 0.05, initRate: 2.0, accel: 0,     maxPasses: 8,  feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
+  { name: "Concat Loop",       direction: "forward",   anchorMode: "fixed",    numVoices: 1,  fullSweep: true,  speed: 0.2,  startDelay: 3.0,  minDelay: 1.0,  initRate: 2.0, accel: 0,     maxPasses: 10, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
+  { name: "Elastic Bounce",    direction: "boomerang", anchorMode: "tracking", numVoices: 1,  fullSweep: true,  speed: 1.0,  startDelay: 0.8,  minDelay: 0.02, initRate: 2.0, accel: 0,     maxPasses: 10, feedback: 0.3, fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
+  { name: "Spawning Choir",    direction: "forward",   anchorMode: "fixed",    numVoices: 6,  fullSweep: true,  speed: 0.25, startDelay: 3.0,  minDelay: 1.0,  initRate: 2.0, accel: 0,     maxPasses: 12, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
+  { name: "Boomerang Layers",  direction: "boomerang", anchorMode: "fixed",    numVoices: 4,  fullSweep: true,  speed: 0.3,  startDelay: 2.5,  minDelay: 0.5,  initRate: 2.0, accel: 0,     maxPasses: 8,  feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
+  { name: "Tight Paddle",      direction: "boomerang", anchorMode: "tracking", numVoices: 1,  fullSweep: true,  speed: 3.0,  startDelay: 0.15, minDelay: 0.005,initRate: 2.0, accel: 0,     maxPasses: 10, feedback: 0.5, fbDelay: 0.5,  globalFeedback: 0,   dryWet: 0.85 },
+  { name: "Decel Drift",       direction: "forward",   anchorMode: "fixed",    numVoices: 3,  fullSweep: false, speed: 0.4,  startDelay: 3.0,  minDelay: 1.0,  initRate: 2.0, accel: -0.12, maxPasses: 12, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
+  { name: "Fixed Accel",       direction: "forward",   anchorMode: "fixed",    numVoices: 1,  fullSweep: false, speed: 0.5,  startDelay: 2.0,  minDelay: 1.0,  initRate: 0.5, accel: 0.15,  maxPasses: 12, feedback: 0,   fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.85 },
+  { name: "Reverse Cascade",   direction: "backward",  anchorMode: "fixed",    numVoices: 5,  fullSweep: true,  speed: 0.3,  startDelay: 3.0,  minDelay: 0.5,  initRate: 2.0, accel: 0,     maxPasses: 10, feedback: 0.3, fbDelay: 2.0,  globalFeedback: 0,   dryWet: 1.0  },
+  { name: "Ping Pong Blur",    direction: "boomerang", anchorMode: "tracking", numVoices: 4,  fullSweep: true,  speed: 0.6,  startDelay: 1.5,  minDelay: 0.5,  initRate: 2.0, accel: 0,     maxPasses: 10, feedback: 0.4, fbDelay: 1.0,  globalFeedback: 0,   dryWet: 0.9  },
+  { name: "Deep Freeze",       direction: "forward",   anchorMode: "fixed",    numVoices: 1,  fullSweep: false, speed: 0.15, startDelay: 5.0,  minDelay: 1.0,  initRate: 0.1, accel: 0.05,  maxPasses: 20, feedback: 0.5, fbDelay: 3.0,  globalFeedback: 0,   dryWet: 1.0  },
+  { name: "Self-Feed Rise",    direction: "forward",   anchorMode: "fixed",    numVoices: 3,  fullSweep: false, speed: 0.4,  startDelay: 2.0,  minDelay: 1.0,  initRate: 0.4, accel: 0.15,  maxPasses: 12, feedback: 0.3, fbDelay: 1.5,  globalFeedback: 0.5, dryWet: 1.0  },
 ];
 
 export function BipolarBreakdownDelay() {
@@ -94,7 +96,7 @@ export function BipolarBreakdownDelay() {
 
   const [direction, setDirection] = useState<Direction>("forward");
   const [anchorMode, setAnchorMode] = useState<AnchorMode>("fixed");
-  const [overlap, setOverlap] = useState(1);
+  const [numVoices, setNumVoices] = useState(1);
   const [fullSweep, setFullSweep] = useState(true);
   const [speed, setSpeed] = useState(0.2);
   const [startDelay, setStartDelay] = useState(3.0);
@@ -126,7 +128,7 @@ export function BipolarBreakdownDelay() {
   playingRef.current = playing;
 
   const params: BipolarBreakdownDelayParams = {
-    direction, anchorMode, overlap, fullSweep,
+    direction, anchorMode, numVoices, fullSweep,
     speed, startDelay, minDelay, initRate, accel, maxPasses,
     feedback, fbDelay, globalFeedback, dryWet, inputGain, resetCount,
   };
@@ -222,7 +224,7 @@ export function BipolarBreakdownDelay() {
   const applyPreset = (p: Preset) => {
     setDirection(p.direction);
     setAnchorMode(p.anchorMode);
-    setOverlap(p.overlap);
+    setNumVoices(p.numVoices);
     setFullSweep(p.fullSweep);
     setSpeed(p.speed);
     setStartDelay(p.startDelay);
@@ -253,7 +255,7 @@ export function BipolarBreakdownDelay() {
     setCustomPresets((prev) => [
       ...prev,
       {
-        name, direction, anchorMode, overlap, fullSweep,
+        name, direction, anchorMode, numVoices, fullSweep,
         speed, startDelay, minDelay, initRate, accel, maxPasses,
         feedback, fbDelay, globalFeedback, dryWet,
       },
@@ -313,10 +315,12 @@ export function BipolarBreakdownDelay() {
       </p>
       <p style={{ opacity: 0.7, marginTop: "0", marginBottom: "1.5rem" }}>
         Record head writes continuously. Position (x) marks an anchor in the
-        buffer. Play heads sweep between x and the record head — forward,
-        backward, or boomerang — at constant or accelerating rates, with
-        optional overlap. Fixed anchor lets x fall further behind each pass;
-        tracking keeps x at a set delay.
+        buffer. Each voice spawns at an equal interval through the cycle, setting
+        its own anchor at startDelay behind the record head at that moment.
+        Voices sweep between their anchor and the record head — forward,
+        backward, or boomerang — at constant, accelerating, or decelerating
+        rates. Fixed anchor lets each voice&apos;s extent grow as the record head
+        moves on; tracking keeps extent at a set delay.
       </p>
 
       <div className="source-bar">
@@ -375,7 +379,7 @@ export function BipolarBreakdownDelay() {
             <button
               className="preset-btn"
               onClick={() => applyPreset(p)}
-              title={`${p.direction} / ${p.anchorMode} / ×${p.overlap} / ${p.fullSweep ? "sweep" : "rate"}`}
+              title={`${p.direction} / ${p.anchorMode} / ${p.numVoices}v / ${p.fullSweep ? "sweep" : "rate"}`}
             >
               {p.name}
             </button>
@@ -494,30 +498,30 @@ export function BipolarBreakdownDelay() {
         <Slider
           label="Start Delay"
           value={startDelay}
-          min={0.01}
+          min={0.002}
           max={10}
-          step={0.01}
+          step={0.001}
           unit="s"
-          curve={2}
+          curve={3}
           onChange={setStartDelay}
         />
         <Slider
           label="Min Delay"
           value={minDelay}
-          min={0}
+          min={0.001}
           max={5}
-          step={0.01}
+          step={0.001}
           unit="s"
-          curve={2}
+          curve={3}
           onChange={setMinDelay}
         />
         <Slider
-          label="Overlap"
-          value={overlap}
+          label="Voices"
+          value={numVoices}
           min={1}
-          max={8}
+          max={12}
           step={1}
-          onChange={setOverlap}
+          onChange={setNumVoices}
         />
         {!fullSweep && (
           <>
@@ -534,11 +538,10 @@ export function BipolarBreakdownDelay() {
             <Slider
               label="Accel"
               value={accel}
-              min={0}
+              min={-2}
               max={2}
               step={0.01}
               unit="×/pass"
-              curve={2}
               onChange={setAccel}
             />
           </>
@@ -596,11 +599,14 @@ export function BipolarBreakdownDelay() {
   PLUS --> WRITE["Write to circular buffer"]
   WRITE --> FB_RD["fbHead: read at fbDelay -- SILENT"]
   FB_RD -->|"x 0 -- not heard"| SINK["fbSink"]
-  WRITE --> V["Overlap voices 1..N"]
-  V --> DIR["Direction: fwd / bwd / boomerang"]
-  DIR -->|"delay = extent - sweepRange x sweepPhase"| READ["Read from buffer"]
-  READ -->|"x Hann window if overlap > 1"| SUM["Sum all voices"]
-  SUM -->|"x cycleEnv -- Hann if fixed"| GFB_TAP["Global FB tap"]
+  WRITE --> V["Voices 1..N -- each spawns with own anchor"]
+  V --> BIRTH["Voice i born at i/N through cycle"]
+  BIRTH --> ANCHOR["Anchor = startDelay behind record head at birth"]
+  ANCHOR --> EXT["Extent grows as record head moves on"]
+  EXT --> DIR["Direction: fwd / bwd / boomerang"]
+  DIR -->|"delay = voiceExtent - sweepRange x sweepPhase"| READ["Read from buffer"]
+  READ -->|"x alive gate -- fade in at birth"| SUM["Sum all voices"]
+  SUM -->|"x cycleEnv -- fade out if fixed"| GFB_TAP["Global FB tap"]
   GFB_TAP -->|"x dryWet"| WET["Wet signal"]
   IN -->|"x 1 - dryWet"| DRY["Dry signal"]
   DRY --> OUT_MIX["(+) output"]
@@ -609,9 +615,10 @@ export function BipolarBreakdownDelay() {
   OUT_MIX --> OUT["Output"]
 `} />
       <div style={{ opacity: 0.5, fontSize: "0.7rem", marginTop: "0.5rem" }}>
-        <p><strong>Fixed anchor</strong>: position (x) stays put — extent between x and record head grows each pass. Hann envelope fades each cycle, then x resets.</p>
-        <p><strong>Tracking anchor</strong>: x follows the record head at a set delay — extent stays constant, perpetual playback.</p>
-        <p><strong>Full Range</strong>: sweep covers the full extent each pass. <strong>Rate Ctrl</strong>: sweep range = (initRate + N×accel − 1) × passDuration.</p>
+        <p><strong>Voices</strong>: each voice spawns at an equal interval through the cycle, setting its own anchor at startDelay behind the record head at the moment of birth. Earlier voices accumulate more extent as the record head advances.</p>
+        <p><strong>Fixed anchor</strong>: each voice&apos;s anchor stays put — extent grows. Fade-out envelope ends each cycle, then all voices reset.</p>
+        <p><strong>Tracking anchor</strong>: anchors follow the record head at a set delay — extent stays constant, perpetual playback.</p>
+        <p><strong>Full Range</strong>: sweep covers the full extent each pass. <strong>Rate Ctrl</strong>: sweep range = (initRate + N×accel − 1) × passDuration. Accel can be negative for deceleration.</p>
       </div>
     </div>
   );
